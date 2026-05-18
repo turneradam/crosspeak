@@ -31,10 +31,7 @@ path = "src/crosspeak/__init__.py"
 packages = ["src/crosspeak"]
 
 [dependency-groups]
-dev = [
-    "pytest>=8",
-    "ruff>=0.6",
-]
+dev = ["pytest>=8", "ruff>=0.6"]
 
 [tool.ruff]
 line-length = 100
@@ -42,6 +39,9 @@ target-version = "py311"
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "N", "UP", "B", "SIM", "RUF"]
+ignore = [
+    "N807", # misfires on legitimate dunders like __post_init__, __repr__
+]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
