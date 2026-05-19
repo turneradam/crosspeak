@@ -10,6 +10,7 @@ readme = "README.md"
 license = "MIT"
 authors = [{ name = "Adam H. Turner", email = "aturner@ateneo.edu" }]
 requires-python = ">=3.11"
+dependencies = ["numpy>=2"]
 classifiers = [
     "Development Status :: 2 - Pre-Alpha",
     "Intended Audience :: Science/Research",
