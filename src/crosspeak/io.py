@@ -33,7 +33,7 @@ def read_spectrum(
     if not path.is_file():
         raise FileNotFoundError(f"File not found: {path}")
 
-    data = np.loadtext(
+    data = np.loadtxt(
         path,
         delimiter=delimiter,
         usecols=(wavenumber_col, intensity_col),
@@ -74,7 +74,7 @@ def read_series(
         A SpectralSeries object containing the spectra data.
     """
     if len(files) < 2:
-        raise ValueError(f"At least two files are required to create a series. Got {len(files)}.")
+        raise ValueError(f"need at least 2 files, got {len(files)}")
 
     perturbations = list(files.keys())
     paths = list(files.values())
@@ -89,24 +89,22 @@ def read_series(
     intensities = np.empty((len(files), first_wn.size))
     intensities[0] = first_intens
 
-    for i, path in enumerate(paths[1:], start=1):
+    for i, p in enumerate(paths[1:], start=1):
         wn, intens = read_spectrum(
-            path,
+            p,
             wavenumber_col=wavenumber_col,
             intensity_col=intensity_col,
             delimiter=delimiter,
         )
-
         if not np.array_equal(wn, first_wn):
             raise ValueError(
-                f"wavenumber grid in {path} differs from first file {paths[0]}; "
+                f"wavenumber grid in {p} differs from first file {paths[0]}; "
                 f"check your data or regrid the files to a common axis first"
             )
-
         intensities[i] = intens
 
     return SpectralSeries(
-        wavenumers=first_wn,
+        wavenumbers=first_wn,
         perturbations=perturbations,
         intensities=intensities,
         name=name,
