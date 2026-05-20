@@ -1,7 +1,84 @@
 import numpy as np
 import pytest
 
-from crosspeak import SpectralSeries, read_series, read_spectrum
+from crosspeak import SpectralSeries, read_series, read_spectrum, regrid_spectrum
+
+
+def test_regrid_basic():
+    src_wn = np.array([1.0, 2.0, 3.0, 4.0, 5.0])
+    src_intens = src_wn**2
+    target_wn = np.array([1.5, 2.5, 3.5])
+
+    out = regrid_spectrum(src_wn, src_intens, target_wn)
+
+    np.testing.assert_allclose(out, target_wn**2, atol=1e-10)
+
+
+def test_regrid_identity():
+    wn = np.linspace(3700, 3100, 50)
+    intens = np.sin(wn / 100)
+
+    out = regrid_spectrum(wn, intens, wn)
+
+    np.testing.assert_allclose(out, intens, atol=1e-10)
+
+
+def test_regrid_descending_source():
+    wn_desc = np.array([5.0, 4.0, 3.0, 2.0, 1.0])
+    intens = wn_desc**2
+    target_wn = np.array([1.5, 2.5, 3.5])
+
+    out = regrid_spectrum(wn_desc, intens, target_wn)
+
+    np.testing.assert_allclose(out, target_wn**2, atol=1e-10)
+
+
+def test_regrid_out_of_range_raises():
+    wn = np.linspace(3700, 3100, 50)
+    intens = np.sin(wn / 100)
+    target_wn = np.linspace(4000, 3000, 30)
+
+    with pytest.raises(ValueError, match="extends outside"):
+        regrid_spectrum(wn, intens, target_wn)
+
+
+def test_regrid_length_mismatch_raises():
+    with pytest.raises(ValueError, match="same length"):
+        regrid_spectrum([1, 2, 3], [1, 2, 3, 4], [1.5])
+
+
+def test_regrid_duplicate_wavenumbers_raises():
+    with pytest.raises(ValueError, match="duplicate"):
+        regrid_spectrum([1, 2, 2, 3], [1, 4, 4, 9], [1.5])
+
+
+def test_read_series_with_target_grid(tmp_path):
+    wn_a = np.linspace(3700, 3100, 20)
+    wn_b = np.linspace(3699, 3101, 22)  # different grid
+
+    pa = tmp_path / "a.csv"
+    pb = tmp_path / "b.csv"
+    np.savetxt(pa, np.column_stack([wn_a, np.sin(wn_a / 100)]), delimiter=",")
+    np.savetxt(pb, np.column_stack([wn_b, np.sin(wn_b / 100) * 1.5]), delimiter=",")
+
+    target = np.linspace(3699, 3101, 30)
+    s = read_series({0: pa, 1: pb}, target_grid=target)
+
+    assert s.shape == (2, 30)
+    np.testing.assert_allclose(s.wavenumbers, target)
+
+
+def test_read_series_target_grid_out_of_range(tmp_path):
+    wn = np.linspace(3700, 3100, 20)
+    pa = tmp_path / "a.csv"
+    pb = tmp_path / "b.csv"
+    np.savetxt(pa, np.column_stack([wn, np.zeros(20)]), delimiter=",")
+    np.savetxt(pb, np.column_stack([wn, np.zeros(20)]), delimiter=",")
+
+    target = np.linspace(4000, 3000, 30)
+
+    with pytest.raises(ValueError, match="extends outside"):
+        read_series({0: pa, 1: pb}, target_grid=target)
 
 
 @pytest.fixture
