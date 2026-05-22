@@ -3,8 +3,6 @@ requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [project]
-dependencies = ["numpy>=2", "scipy>=1.13"]
-
 name = "crosspeak"
 dynamic = ["version"]
 description = "Generalized 2D correlation spectroscopy (Noda) for vibrational spectra"
@@ -21,6 +19,8 @@ classifiers = [
     "Programming Language :: Python :: 3.13",
     "Topic :: Scientific/Engineering :: Chemistry",
 ]
+dependencies = ["matplotlib>=3.8", "numpy>=2", "scipy>=1.13"]
+
 
 [project.urls]
 Homepage = "https://github.com/turneradam/crosspeak"
@@ -42,6 +42,7 @@ target-version = "py311"
 [tool.ruff.lint]
 select = ["E", "F", "I", "N", "UP", "B", "SIM", "RUF"]
 ignore = [
+    "N806", # math-convention uppercase (Y, N, X) is appropriate in scientific code
     "N807", # misfires on legitimate dunders like __post_init__, __repr__
 ]
 
