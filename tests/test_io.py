@@ -154,3 +154,26 @@ def test_read_series_grid_mismatch_raises(tmp_path):
 def test_read_series_too_few_files():
     with pytest.raises(ValueError, match="at least 2"):
         read_series({0: "anywhere"})
+
+
+def test_read_spectrum_with_header_row(tmp_path):
+    path = tmp_path / "with_header.csv"
+    wn = np.linspace(3700, 3100, 10)
+    intens = np.sin(wn / 100)
+    with open(path, "w") as f:
+        f.write("Wavenumber,Absorbance\n")
+        for w, a in zip(wn, intens, strict=True):
+            f.write(f"{w},{a}\n")
+
+    wn_out, intens_out = read_spectrum(path, skiprows=1)
+    np.testing.assert_allclose(wn_out, wn)
+    np.testing.assert_allclose(intens_out, intens)
+
+
+def test_read_spectrum_header_without_skiprows_gives_useful_error(tmp_path):
+    path = tmp_path / "with_header.csv"
+    with open(path, "w") as f:
+        f.write("Wavenumber,Absorbance\n1.0,0.1\n2.0,0.2\n")
+
+    with pytest.raises(ValueError, match="skiprows"):
+        read_spectrum(path)

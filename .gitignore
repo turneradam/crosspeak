@@ -16,4 +16,4 @@ htmlcov/
 .idea/
 .vscode/*
 !.vscode/settings.json
-!.vscode/extensions.json
+!.vscode/extensions.jsonsandbox/

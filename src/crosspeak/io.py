@@ -11,17 +11,24 @@ def read_spectrum(
     wavenumber_col=0,
     intensity_col=1,
     delimiter=",",
+    skiprows=0,
 ):
     path = Path(path)
     if not path.is_file():
         raise FileNotFoundError(f"no such file: {path}")
 
-    data = np.loadtxt(
-        path,
-        delimiter=delimiter,
-        usecols=(wavenumber_col, intensity_col),
-        ndmin=2,
-    )
+    try:
+        data = np.loadtxt(
+            path,
+            delimiter=delimiter,
+            usecols=(wavenumber_col, intensity_col),
+            ndmin=2,
+            skiprows=skiprows,
+        )
+    except ValueError as e:
+        raise ValueError(
+            f"failed to read {path}: {e}. If the file has a header row, pass skiprows=1."
+        ) from e
 
     if data.shape[1] != 2:
         raise ValueError(f"expected 2 columns from {path}, got shape {data.shape}")
@@ -72,6 +79,7 @@ def read_series(
     wavenumber_col=0,
     intensity_col=1,
     delimiter=",",
+    skiprows=0,
 ):
     if len(files) < 2:
         raise ValueError(f"need at least 2 files, got {len(files)}")
@@ -89,6 +97,7 @@ def read_series(
                 wavenumber_col=wavenumber_col,
                 intensity_col=intensity_col,
                 delimiter=delimiter,
+                skiprows=skiprows,
             )
             intensities[i] = regrid_spectrum(wn, intens, target_grid)
 
@@ -99,6 +108,7 @@ def read_series(
             wavenumber_col=wavenumber_col,
             intensity_col=intensity_col,
             delimiter=delimiter,
+            skiprows=skiprows,
         )
         intensities = np.empty((len(files), first_wn.size))
         intensities[0] = first_intens
@@ -109,6 +119,7 @@ def read_series(
                 wavenumber_col=wavenumber_col,
                 intensity_col=intensity_col,
                 delimiter=delimiter,
+                skiprows=skiprows,
             )
             if not np.array_equal(wn, first_wn):
                 raise ValueError(
