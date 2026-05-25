@@ -1,7 +1,14 @@
 import numpy as np
 import pytest
 
-from crosspeak import SpectralSeries, asynchronous, hilbert_noda_matrix, synchronous
+from crosspeak import (
+    AutopeakResult,
+    SpectralSeries,
+    asynchronous,
+    find_autopeaks,
+    hilbert_noda_matrix,
+    synchronous,
+)
 
 
 def test_shape():
@@ -219,3 +226,123 @@ def test_asynchronous_no_change_gives_zero():
 def test_asynchronous_rejects_non_series():
     with pytest.raises(TypeError, match="SpectralSeries"):
         asynchronous(np.zeros((5, 100)))
+
+
+def _diag_matrix(values):
+    """Build a fake Phi with `values` on the diagonal, zeros elsewhere."""
+    matrix = np.zeros((len(values), len(values)))
+    np.fill_diagonal(matrix, values)
+    return matrix
+
+
+class TestFindAutopeaks:
+    def test_single_peak_detected(self):
+        wavenumbers = np.linspace(2800, 3700, 100)
+        diagonal = np.exp(-((np.arange(100) - 50) ** 2) / 50)
+        phi = _diag_matrix(diagonal)
+
+        result = find_autopeaks(phi, wavenumbers)
+
+        assert isinstance(result, AutopeakResult)
+        assert result.positions.size == 1
+        np.testing.assert_allclose(result.positions[0], wavenumbers[50])
+        np.testing.assert_allclose(result.intensities[0], 1.0)
+
+    def test_multiple_peaks_detected(self):
+        wavenumbers = np.linspace(2800, 3700, 200)
+        diagonal = (
+            np.exp(-((np.arange(200) - 40) ** 2) / 50)
+            + np.exp(-((np.arange(200) - 100) ** 2) / 50)
+            + np.exp(-((np.arange(200) - 160) ** 2) / 50)
+        )
+        phi = _diag_matrix(diagonal)
+
+        result = find_autopeaks(phi, wavenumbers)
+
+        assert result.positions.size == 3
+        np.testing.assert_allclose(result.positions, wavenumbers[[40, 100, 160]], atol=1e-10)
+
+    def test_flat_diagonal_returns_empty(self):
+        wavenumbers = np.linspace(2800, 3700, 50)
+        phi = np.zeros((50, 50))
+
+        result = find_autopeaks(phi, wavenumbers)
+
+        assert result.positions.size == 0
+        assert result.intensities.size == 0
+
+    def test_prominence_threshold_filters_small_peaks(self):
+        wavenumbers = np.linspace(2800, 3700, 200)
+        diagonal = np.exp(-((np.arange(200) - 40) ** 2) / 50) + 0.01 * np.exp(
+            -((np.arange(200) - 160) ** 2) / 50
+        )
+        phi = _diag_matrix(diagonal)
+
+        result_default = find_autopeaks(phi, wavenumbers)
+        result_loose = find_autopeaks(phi, wavenumbers, prominence_frac=0.001)
+
+        assert result_default.positions.size == 1
+        assert result_loose.positions.size == 2
+
+    def test_explicit_prominence_kwarg_wins(self):
+        wavenumbers = np.linspace(2800, 3700, 200)
+        diagonal = np.exp(-((np.arange(200) - 100) ** 2) / 50)
+        phi = _diag_matrix(diagonal)
+
+        # Absolute prominence above the peak's prominence rejects it
+        result = find_autopeaks(phi, wavenumbers, prominence=2.0)
+        assert result.positions.size == 0
+
+    def test_namedtuple_unpacks(self):
+        wavenumbers = np.linspace(2800, 3700, 100)
+        diagonal = np.exp(-((np.arange(100) - 50) ** 2) / 50)
+        phi = _diag_matrix(diagonal)
+
+        positions, intensities = find_autopeaks(phi, wavenumbers)
+
+        np.testing.assert_allclose(positions, [wavenumbers[50]])
+        np.testing.assert_allclose(intensities, [1.0])
+
+    def test_descending_wavenumbers_preserved(self):
+        wavenumbers = np.linspace(3700, 2800, 100)
+        diagonal = np.exp(-((np.arange(100) - 30) ** 2) / 50)
+        phi = _diag_matrix(diagonal)
+
+        result = find_autopeaks(phi, wavenumbers)
+
+        assert result.positions.size == 1
+        np.testing.assert_allclose(result.positions[0], wavenumbers[30])
+
+    def test_non_square_phi_raises(self):
+        with pytest.raises(ValueError, match="square"):
+            find_autopeaks(np.zeros((10, 20)), np.arange(10))
+
+    def test_wrong_ndim_phi_raises(self):
+        with pytest.raises(ValueError, match="2D"):
+            find_autopeaks(np.zeros(10), np.arange(10))
+
+    def test_wavenumber_size_mismatch_raises(self):
+        with pytest.raises(ValueError, match="does not match"):
+            find_autopeaks(np.zeros((10, 10)), np.arange(5))
+
+    def test_pipeline_synchronous_then_autopeaks(self):
+        """End-to-end: SpectralSeries → synchronous → find_autopeaks."""
+        from crosspeak import SpectralSeries, synchronous
+
+        wn = np.linspace(2800, 3700, 200)
+        perturbations = np.array([0.0, 0.1, 0.2, 0.5, 1.0])
+        band = np.exp(-((wn - 3300) ** 2) / 50**2)
+        intensities = np.outer(perturbations, band)
+        series = SpectralSeries(
+            wavenumbers=wn,
+            perturbations=perturbations,
+            intensities=intensities,
+            name="test",
+        )
+
+        phi = synchronous(series)
+        result = find_autopeaks(phi, wn)
+
+        assert result.positions.size >= 1
+        strongest = result.positions[np.argmax(result.intensities)]
+        assert abs(strongest - 3300) < 10  # within 10 cm-1 of expected band centre
