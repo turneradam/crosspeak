@@ -11,13 +11,14 @@ from crosspeak.noda import (
     synchronous,
 )
 from crosspeak.plot import plot_contour
-from crosspeak.preprocess import mean_center, reference_spectrum
+from crosspeak.preprocess import crop_region, mean_center, reference_spectrum
 from crosspeak.series import SpectralSeries
 
 __all__ = [
     "AutopeakResult",
     "SpectralSeries",
     "asynchronous",
+    "crop_region",
     "find_autopeaks",
     "hilbert_noda_matrix",
     "mean_center",
