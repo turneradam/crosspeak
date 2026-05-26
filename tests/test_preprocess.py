@@ -2,7 +2,7 @@ import numpy as np
 import pytest
 
 from crosspeak import SpectralSeries
-from crosspeak.preprocess import crop_region, mean_center, reference_spectrum
+from crosspeak.preprocess import crop_region, mean_center, reference_spectrum, savgol_smooth
 
 
 @pytest.fixture
@@ -189,3 +189,92 @@ class TestCropRegion:
         n_cropped = cropped.n_wavenumbers
         assert phi.shape == (n_cropped, n_cropped)
         assert n_cropped < series.n_wavenumbers  # actually cropped down
+
+
+class TestSavgolSmooth:
+    def _noisy_gaussian_series(self, n_pert=5, n_wn=401, sigma=30.0, seed=0):
+        """Series of identical Gaussians with additive white noise."""
+        rng = np.random.default_rng(seed)
+        wn = np.linspace(2800, 3700, n_wn)
+        perturbations = np.arange(n_pert, dtype=float)
+        peak_idx = n_wn // 2
+        # Gaussian centred mid-axis, amplitude scales with perturbation
+        base = np.exp(-((np.arange(n_wn) - peak_idx) ** 2) / (2 * sigma**2))
+        clean = perturbations[:, None] * base[None, :]
+        noisy = clean + rng.normal(scale=0.02, size=clean.shape)
+        return SpectralSeries(
+            wavenumbers=wn,
+            perturbations=perturbations,
+            intensities=noisy,
+            name="noisy",
+        ), clean
+
+    def test_returns_same_shape(self):
+        series, _ = self._noisy_gaussian_series()
+        smoothed = savgol_smooth(series)
+        assert smoothed.intensities.shape == series.intensities.shape
+
+    def test_reduces_noise(self):
+        series, clean = self._noisy_gaussian_series()
+
+        # Residual std vs. truth should drop after smoothing
+        noisy_residual_std = np.std(series.intensities - clean)
+        smoothed = savgol_smooth(series)
+        smoothed_residual_std = np.std(smoothed.intensities - clean)
+
+        assert smoothed_residual_std < noisy_residual_std
+
+    def test_preserves_peak_height(self):
+        # Wide-ish Gaussian (sigma=30 samples) with window=13 should retain >95% of height
+        series, _ = self._noisy_gaussian_series(sigma=30.0)
+        smoothed = savgol_smooth(series)
+
+        # Compare max amplitude in highest-perturbation row vs the same row in input
+        original_max = series.intensities[-1].max()
+        smoothed_max = smoothed.intensities[-1].max()
+        assert smoothed_max > 0.95 * original_max
+
+    def test_preserves_metadata(self):
+        series, _ = self._noisy_gaussian_series()
+        smoothed = savgol_smooth(series)
+
+        np.testing.assert_array_equal(smoothed.wavenumbers, series.wavenumbers)
+        np.testing.assert_array_equal(smoothed.perturbations, series.perturbations)
+        assert smoothed.name == series.name
+
+    def test_original_unchanged(self):
+        series, _ = self._noisy_gaussian_series()
+        original_intensities = series.intensities.copy()
+
+        _ = savgol_smooth(series)
+
+        np.testing.assert_array_equal(series.intensities, original_intensities)
+
+    def test_even_window_length_raises(self):
+        series, _ = self._noisy_gaussian_series()
+        with pytest.raises(ValueError, match="must be odd"):
+            savgol_smooth(series, window_length=12)  # even -> scipy raises
+
+    def test_kwargs_passthrough_deriv(self):
+        """deriv=1 via kwargs should give a derivative, not a smoothed spectrum."""
+        series, _ = self._noisy_gaussian_series()
+
+        smoothed = savgol_smooth(series)
+        derivative = savgol_smooth(series, deriv=1)
+
+        # Derivative output should differ substantially from smoothed output
+        assert not np.allclose(smoothed.intensities, derivative.intensities)
+        # Smoothed Gaussian stays positive; its derivative crosses zero
+        assert (derivative.intensities < 0).any()
+        assert (derivative.intensities > 0).any()
+
+    def test_pipeline_smooth_then_synchronous(self):
+        from crosspeak import synchronous
+
+        series, _ = self._noisy_gaussian_series()
+        smoothed = savgol_smooth(series)
+        phi = synchronous(smoothed)
+
+        assert phi.shape == (series.n_wavenumbers, series.n_wavenumbers)
+        # Diagonal should be non-negative (it's the autopower)
+        assert (np.diag(phi) >= 0).all()

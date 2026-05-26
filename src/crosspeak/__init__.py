@@ -2,6 +2,7 @@
 
 __version__ = "0.0.1"
 
+
 from crosspeak.io import read_series, read_spectrum, regrid_spectrum
 from crosspeak.noda import (
     AutopeakResult,
@@ -11,7 +12,12 @@ from crosspeak.noda import (
     synchronous,
 )
 from crosspeak.plot import plot_contour
-from crosspeak.preprocess import crop_region, mean_center, reference_spectrum
+from crosspeak.preprocess import (
+    crop_region,
+    mean_center,
+    reference_spectrum,
+    savgol_smooth,
+)
 from crosspeak.series import SpectralSeries
 
 __all__ = [
@@ -27,5 +33,6 @@ __all__ = [
     "read_spectrum",
     "reference_spectrum",
     "regrid_spectrum",
+    "savgol_smooth",
     "synchronous",
 ]
