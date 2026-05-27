@@ -2,7 +2,13 @@ import numpy as np
 import pytest
 
 from crosspeak import SpectralSeries
-from crosspeak.preprocess import crop_region, mean_center, reference_spectrum, savgol_smooth
+from crosspeak.preprocess import (
+    area_normalize,
+    crop_region,
+    mean_center,
+    reference_spectrum,
+    savgol_smooth,
+)
 
 
 @pytest.fixture
@@ -277,4 +283,107 @@ class TestSavgolSmooth:
 
         assert phi.shape == (series.n_wavenumbers, series.n_wavenumbers)
         # Diagonal should be non-negative (it's the autopower)
+        assert (np.diag(phi) >= 0).all()
+
+
+class TestAreaNormalize:
+    def _series(self, wn=None, intensities=None, perturbations=None, name="test"):
+        """Helper: Gaussian-band series with sensible defaults."""
+        if wn is None:
+            wn = np.linspace(2800, 3700, 200)
+        if perturbations is None:
+            perturbations = np.arange(4, dtype=float)
+        if intensities is None:
+            base = np.exp(-((wn - 3300) ** 2) / (2 * 50**2))
+            intensities = (perturbations + 1)[:, None] * base[None, :]
+        return SpectralSeries(
+            wavenumbers=wn,
+            perturbations=perturbations,
+            intensities=intensities,
+            name=name,
+        )
+
+    def test_unit_area_default(self):
+        series = self._series()
+        normalized = area_normalize(series)
+
+        areas = np.abs(np.trapezoid(normalized.intensities, x=normalized.wavenumbers, axis=-1))
+        np.testing.assert_allclose(areas, 1.0, atol=1e-10)
+
+    def test_custom_target_area(self):
+        series = self._series()
+        normalized = area_normalize(series, target_area=10.0)
+
+        areas = np.abs(np.trapezoid(normalized.intensities, x=normalized.wavenumbers, axis=-1))
+        np.testing.assert_allclose(areas, 10.0, atol=1e-9)
+
+    def test_metadata_preserved(self):
+        series = self._series()
+        normalized = area_normalize(series)
+
+        np.testing.assert_array_equal(normalized.wavenumbers, series.wavenumbers)
+        np.testing.assert_array_equal(normalized.perturbations, series.perturbations)
+        assert normalized.name == series.name
+
+    def test_original_unchanged(self):
+        series = self._series()
+        original = series.intensities.copy()
+
+        _ = area_normalize(series)
+
+        np.testing.assert_array_equal(series.intensities, original)
+
+    def test_zero_area_raises(self):
+        wn = np.linspace(2800, 3700, 200)
+        perturbations = np.arange(3, dtype=float)
+        intensities = np.ones((3, 200))
+        intensities[1] = 0.0  # middle row is all zeros
+        series = SpectralSeries(
+            wavenumbers=wn,
+            perturbations=perturbations,
+            intensities=intensities,
+            name="test",
+        )
+
+        with pytest.raises(ValueError, match="zero integrated area"):
+            area_normalize(series)
+
+    def test_descending_wavenumbers(self):
+        wn = np.linspace(3700, 2800, 200)
+        series = self._series(wn=wn)
+        normalized = area_normalize(series)
+
+        areas = np.abs(np.trapezoid(normalized.intensities, x=normalized.wavenumbers, axis=-1))
+        np.testing.assert_allclose(areas, 1.0, atol=1e-10)
+
+    def test_reference_region_normalizes_to_band(self):
+        series = self._series()
+        normalized = area_normalize(series, reference_region=(3000, 3500))
+
+        mask = (normalized.wavenumbers >= 3000) & (normalized.wavenumbers <= 3500)
+        ref_areas = np.abs(
+            np.trapezoid(
+                normalized.intensities[:, mask],
+                x=normalized.wavenumbers[mask],
+                axis=-1,
+            )
+        )
+        np.testing.assert_allclose(ref_areas, 1.0, atol=1e-10)
+
+    def test_reference_region_invalid_raises(self):
+        series = self._series()
+
+        with pytest.raises(ValueError, match="must be <="):
+            area_normalize(series, reference_region=(3500, 3000))
+        with pytest.raises(ValueError, match="no overlap"):
+            area_normalize(series, reference_region=(1000, 2000))
+
+    def test_pipeline_normalize_then_synchronous(self):
+        from crosspeak import synchronous
+
+        series = self._series()
+        normalized = area_normalize(series)
+        phi = synchronous(normalized)
+
+        assert phi.shape == (series.n_wavenumbers, series.n_wavenumbers)
         assert (np.diag(phi) >= 0).all()

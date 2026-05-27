@@ -1,3 +1,4 @@
+import numpy as np
 from scipy.signal import savgol_filter
 
 from crosspeak.series import SpectralSeries
@@ -91,5 +92,61 @@ def savgol_smooth(
         wavenumbers=series.wavenumbers,
         perturbations=series.perturbations,
         intensities=smoothed,
+        name=series.name,
+    )
+
+
+def area_normalize(
+    series: SpectralSeries,
+    target_area: float = 1.0,
+    reference_region: tuple[float, float] | None = None,
+) -> SpectralSeries:
+    """Normalize each spectrum to a target area under the curve.
+
+    Parameters
+    ----------
+    series
+        Input SpectralSeries.
+    target_area
+        Desired area under the curve for each spectrum after normalization.
+        Default is 1.0.
+    reference_region
+        Optional tuple specifying a wavenumber range (low, high) to use for
+        calculating the area. If None, the entire wavenumber range is used.
+
+    Returns
+    -------
+    SpectralSeries
+        New SpectralSeries with normalized intensities. Wavenumbers,
+        perturbations, and name are preserved.
+
+    Raises
+    ------
+    ValueError
+        If any row's integrated area is zero, or if `reference_region` is
+        invalid (inverted bounds or no overlap with data — delegated to
+        `crop_region`).
+    """
+    if reference_region is not None:
+        ref = crop_region(series, *reference_region)
+        wn_ref = ref.wavenumbers
+        intens_ref = ref.intensities
+    else:
+        wn_ref = series.wavenumbers
+        intens_ref = series.intensities
+
+    areas = np.abs(np.trapezoid(intens_ref, x=wn_ref, axis=-1))
+
+    if (areas == 0).any():
+        zero_rows = np.where(areas == 0)[0].tolist()
+        raise ValueError(f"zero integrated area on perturbation rows {zero_rows}; cannot normalize")
+
+    scale = target_area / areas
+    normalized = series.intensities * scale[:, None]
+
+    return SpectralSeries(
+        wavenumbers=series.wavenumbers,
+        perturbations=series.perturbations,
+        intensities=normalized,
         name=series.name,
     )

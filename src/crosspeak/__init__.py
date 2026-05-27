@@ -13,6 +13,7 @@ from crosspeak.noda import (
 )
 from crosspeak.plot import plot_contour
 from crosspeak.preprocess import (
+    area_normalize,
     crop_region,
     mean_center,
     reference_spectrum,
@@ -23,6 +24,7 @@ from crosspeak.series import SpectralSeries
 __all__ = [
     "AutopeakResult",
     "SpectralSeries",
+    "area_normalize",
     "asynchronous",
     "crop_region",
     "find_autopeaks",
