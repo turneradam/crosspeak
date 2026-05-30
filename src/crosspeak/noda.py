@@ -116,3 +116,76 @@ def find_autopeaks(
         positions=wavenumbers[indices],
         intensities=diagonal[indices],
     )
+
+
+def synchronous_hetero(
+    series_1: SpectralSeries,
+    series_2: SpectralSeries,
+) -> np.ndarray:
+    """Heterospectral synchronous 2DCOS matrix.
+
+    Computes Φ(ν₁, ν₂) = Y_1^T @ Y_2 / (m - 1), where Y_1 and Y_2 are the
+    mean-centred intensities of the two series. The two series must share
+    the same perturbation array (rows are paired by index).
+
+    Parameters
+    ----------
+    series_1
+        SpectralSeries supplying ν₁ — maps to matrix axis 0 (rows), and to
+        the y-axis when the result is plotted.
+    series_2
+        SpectralSeries supplying ν₂ — maps to matrix axis 1 (cols), and to
+        the x-axis when the result is plotted.
+
+    Returns
+    -------
+    np.ndarray
+        Shape `(n_1, n_2)`. Not symmetric in general.
+
+    Raises
+    ------
+    ValueError
+        If the two series have different perturbation arrays.
+    """
+    _check_paired_perturbations(series_1, series_2)
+    m = series_1.n_perturbations
+    Y_1 = series_1.intensities - series_1.intensities.mean(axis=0)
+    Y_2 = series_2.intensities - series_2.intensities.mean(axis=0)
+    return (Y_1.T @ Y_2) / (m - 1)
+
+
+def asynchronous_hetero(
+    series_1: SpectralSeries,
+    series_2: SpectralSeries,
+) -> np.ndarray:
+    """Heterospectral asynchronous 2DCOS matrix.
+
+    Computes Ψ(ν₁, ν₂) = Y_1^T @ N @ Y_2 / (m - 1), where N is the
+    Hilbert-Noda matrix of shape (m, m).
+
+    See `synchronous_hetero` for axis conventions.
+
+    Raises
+    ------
+    ValueError
+        If the two series have different perturbation arrays.
+    """
+    _check_paired_perturbations(series_1, series_2)
+    m = series_1.n_perturbations
+    Y_1 = series_1.intensities - series_1.intensities.mean(axis=0)
+    Y_2 = series_2.intensities - series_2.intensities.mean(axis=0)
+    N = hilbert_noda_matrix(m)
+    return (Y_1.T @ N @ Y_2) / (m - 1)
+
+
+def _check_paired_perturbations(
+    series_1: SpectralSeries,
+    series_2: SpectralSeries,
+) -> None:
+    """Raise if two series don't share identical perturbation arrays."""
+    if not np.array_equal(series_1.perturbations, series_2.perturbations):
+        raise ValueError(
+            "series_1 and series_2 must have identical perturbation arrays; "
+            f"got shapes {series_1.perturbations.shape} vs "
+            f"{series_2.perturbations.shape}"
+        )

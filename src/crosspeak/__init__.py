@@ -1,15 +1,18 @@
 """crosspeak — generalized 2D correlation spectroscopy for vibrational spectra."""
 
-__version__ = "0.0.1"
+from importlib.metadata import version
 
+__version__ = version("crosspeak")
 
 from crosspeak.io import read_series, read_spectrum, regrid_spectrum
 from crosspeak.noda import (
     AutopeakResult,
     asynchronous,
+    asynchronous_hetero,
     find_autopeaks,
     hilbert_noda_matrix,
     synchronous,
+    synchronous_hetero,
 )
 from crosspeak.plot import plot_contour
 from crosspeak.preprocess import (
@@ -26,6 +29,7 @@ __all__ = [
     "SpectralSeries",
     "area_normalize",
     "asynchronous",
+    "asynchronous_hetero",
     "crop_region",
     "find_autopeaks",
     "hilbert_noda_matrix",
@@ -37,4 +41,5 @@ __all__ = [
     "regrid_spectrum",
     "savgol_smooth",
     "synchronous",
+    "synchronous_hetero",
 ]

@@ -5,9 +5,11 @@ from crosspeak import (
     AutopeakResult,
     SpectralSeries,
     asynchronous,
+    asynchronous_hetero,
     find_autopeaks,
     hilbert_noda_matrix,
     synchronous,
+    synchronous_hetero,
 )
 
 
@@ -346,3 +348,93 @@ class TestFindAutopeaks:
         assert result.positions.size >= 1
         strongest = result.positions[np.argmax(result.intensities)]
         assert abs(strongest - 3300) < 10  # within 10 cm-1 of expected band centre
+
+
+class TestHeterospectral:
+    def _paired_series(self, m=5, n_1=100, n_2=80, anticorrelated=True):
+        """Two series sharing perturbations, different wavenumber regions."""
+        perturbations = np.arange(m, dtype=float)
+        wn_1 = np.linspace(3100, 3700, n_1)  # OH region
+        wn_2 = np.linspace(2800, 3050, n_2)  # CH region
+
+        band_1 = np.exp(-((wn_1 - 3300) ** 2) / (2 * 50**2))
+        intens_1 = perturbations[:, None] * band_1[None, :]
+
+        band_2 = np.exp(-((wn_2 - 2900) ** 2) / (2 * 30**2))
+        if anticorrelated:
+            intens_2 = (m - 1 - perturbations)[:, None] * band_2[None, :]
+        else:
+            intens_2 = perturbations[:, None] * band_2[None, :]
+
+        s1 = SpectralSeries(
+            wavenumbers=wn_1,
+            perturbations=perturbations,
+            intensities=intens_1,
+            name="S1",
+        )
+        s2 = SpectralSeries(
+            wavenumbers=wn_2,
+            perturbations=perturbations,
+            intensities=intens_2,
+            name="S2",
+        )
+        return s1, s2
+
+    def test_synchronous_hetero_shape(self):
+        s1, s2 = self._paired_series(m=5, n_1=100, n_2=80)
+        phi = synchronous_hetero(s1, s2)
+        assert phi.shape == (100, 80)
+
+    def test_asynchronous_hetero_shape(self):
+        s1, s2 = self._paired_series(m=5, n_1=100, n_2=80)
+        psi = asynchronous_hetero(s1, s2)
+        assert psi.shape == (100, 80)
+
+    def test_perturbation_value_mismatch_raises(self):
+        s1, _ = self._paired_series()
+        wn_2 = np.linspace(2800, 3050, 80)
+        bad = SpectralSeries(
+            wavenumbers=wn_2,
+            perturbations=np.arange(5, 10, dtype=float),  # different values
+            intensities=np.ones((5, 80)),
+            name="bad",
+        )
+        with pytest.raises(ValueError, match="identical perturbation"):
+            synchronous_hetero(s1, bad)
+        with pytest.raises(ValueError, match="identical perturbation"):
+            asynchronous_hetero(s1, bad)
+
+    def test_perturbation_length_mismatch_raises(self):
+        s1, _ = self._paired_series(m=5)
+        wn_2 = np.linspace(2800, 3050, 80)
+        short = SpectralSeries(
+            wavenumbers=wn_2,
+            perturbations=np.arange(3, dtype=float),
+            intensities=np.ones((3, 80)),
+            name="short",
+        )
+        with pytest.raises(ValueError, match="identical perturbation"):
+            synchronous_hetero(s1, short)
+
+    def test_anticorrelation_produces_negative_sync(self):
+        """Anti-correlated bands -> negative sync at peak intersection."""
+        s1, s2 = self._paired_series(anticorrelated=True)
+        phi = synchronous_hetero(s1, s2)
+
+        i_peak = np.argmin(np.abs(s1.wavenumbers - 3300))
+        j_peak = np.argmin(np.abs(s2.wavenumbers - 2900))
+        assert phi[i_peak, j_peak] < 0
+
+    def test_hetero_with_self_equals_homo_sync(self):
+        """sync_hetero(s, s) must equal sync(s)."""
+        s1, _ = self._paired_series()
+        phi_hetero = synchronous_hetero(s1, s1)
+        phi_homo = synchronous(s1)
+        np.testing.assert_allclose(phi_hetero, phi_homo, atol=1e-12)
+
+    def test_hetero_with_self_equals_homo_async(self):
+        """async_hetero(s, s) must equal async(s)."""
+        s1, _ = self._paired_series()
+        psi_hetero = asynchronous_hetero(s1, s1)
+        psi_homo = asynchronous(s1)
+        np.testing.assert_allclose(psi_hetero, psi_homo, atol=1e-12)

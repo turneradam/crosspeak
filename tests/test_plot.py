@@ -60,16 +60,9 @@ def test_ascending_axes(basic_matrix):
     assert ax.get_ylim()[0] < ax.get_ylim()[1]
 
 
-def test_rejects_non_square_matrix(basic_matrix):
-    _, wn = basic_matrix
-    matrix = np.zeros((5, 6))
-    with pytest.raises(ValueError, match="square"):
-        plot_contour(matrix, wn[:5])
-
-
 def test_rejects_axis_mismatch(basic_matrix):
     matrix, wn = basic_matrix
-    with pytest.raises(ValueError, match="doesn't match"):
+    with pytest.raises(ValueError, match="must equal"):
         plot_contour(matrix, wn[:10])
 
 
@@ -112,3 +105,27 @@ def test_full_pipeline_asynchronous():
     psi = asynchronous(s)
     ax = plot_contour(psi, s.wavenumbers, title="test async")
     assert ax.get_title() == "test async"
+
+
+class TestPlotContourHetero:
+    def test_rectangular_matrix_accepted(self):
+        rng = np.random.default_rng(0)
+        matrix = rng.standard_normal((100, 80))
+        wn_y = np.linspace(3100, 3700, 100)
+        wn_x = np.linspace(2800, 3050, 80)
+
+        ax = plot_contour(matrix, wn_y, wavenumbers_x=wn_x)
+
+        assert ax is not None
+        plt.close("all")
+
+    def test_backward_compat_homospectral(self):
+        """Existing single-axis signature still works for square matrices."""
+        rng = np.random.default_rng(0)
+        matrix = rng.standard_normal((50, 50))
+        wn = np.linspace(2800, 3700, 50)
+
+        ax = plot_contour(matrix, wn)
+
+        assert ax is not None
+        plt.close("all")

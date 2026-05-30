@@ -27,19 +27,48 @@ _register_palettes()
 
 
 def plot_contour(
-    matrix,
-    wavenumbers,
+    matrix: np.ndarray,
+    wavenumbers: np.ndarray,
+    *,
+    wavenumbers_x: np.ndarray | None = None,
     ax=None,
-    title=None,
-    cmap="vlag",
-    n_levels=50,
-    descending=True,
+    title: str | None = None,
+    cmap: str = "vlag",
+    n_levels: int = 50,
+    descending: bool = True,
 ):
+    """...
+
+    Parameters
+    ----------
+    matrix
+        2D correlation matrix.
+    wavenumbers
+        Wavenumber axis values for matrix axis 0 (rows, y-axis of plot).
+        Length must equal matrix.shape[0].
+    wavenumbers_x
+        Optional. Wavenumber axis values for matrix axis 1 (cols, x-axis).
+        Length must equal matrix.shape[1]. If None (default), `wavenumbers`
+        is used for both axes — the standard homospectral case.
+    ...
+    """
+    if wavenumbers_x is None:
+        wavenumbers_x = wavenumbers
+
     matrix = np.asarray(matrix)
     wavenumbers = np.asarray(wavenumbers)
 
-    if matrix.ndim != 2 or matrix.shape[0] != matrix.shape[1]:
-        raise ValueError(f"matrix must be square 2D, got shape {matrix.shape}")
+    if matrix.ndim != 2:
+        raise ValueError(f"matrix must be 2D, got shape {matrix.shape}")
+    if matrix.shape[0] != wavenumbers.size:
+        raise ValueError(
+            f"matrix.shape[0] ({matrix.shape[0]}) must equal wavenumbers size ({wavenumbers.size})"
+        )
+    if matrix.shape[1] != wavenumbers_x.size:
+        raise ValueError(
+            f"matrix.shape[1] ({matrix.shape[1]}) must equal "
+            f"wavenumbers_x size ({wavenumbers_x.size})"
+        )
     if wavenumbers.ndim != 1:
         raise ValueError(f"wavenumbers must be 1D, got shape {wavenumbers.shape}")
     if matrix.shape[0] != wavenumbers.size:
@@ -58,7 +87,7 @@ def plot_contour(
     norm = TwoSlopeNorm(vmin=-vmax, vcenter=0, vmax=vmax)
 
     cf = ax.contourf(
-        wavenumbers,
+        wavenumbers_x,
         wavenumbers,
         matrix,
         levels=n_levels,
@@ -67,7 +96,7 @@ def plot_contour(
     )
 
     ax.contour(
-        wavenumbers,
+        wavenumbers_x,
         wavenumbers,
         matrix,
         levels=10,
