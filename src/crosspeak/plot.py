@@ -111,15 +111,15 @@ def plot_contour(
     )
 
     if descending:
-        ax.set_xlim(wavenumbers.max(), wavenumbers.min())
+        ax.set_xlim(wavenumbers_x.max(), wavenumbers_x.min())
         ax.set_ylim(wavenumbers.max(), wavenumbers.min())
     else:
-        ax.set_xlim(wavenumbers.min(), wavenumbers.max())
+        ax.set_xlim(wavenumbers_x.min(), wavenumbers_x.max())
         ax.set_ylim(wavenumbers.min(), wavenumbers.max())
 
     ax.set_xlabel("Wavenumber (cm⁻¹)")
     ax.set_ylabel("Wavenumber (cm⁻¹)")
-    ax.set_aspect("equal")
+    ax.set_aspect("equal" if wavenumbers is wavenumbers_x else "auto")
 
     if title:
         ax.set_title(title)
@@ -139,7 +139,7 @@ def plot_sync_async(
     cmap: str = "vlag",
     n_levels: int = 50,
     descending: bool = True,
-    figzise: tuple[float, float] = (12, 5),
+    figsize: tuple[float, float] = (12, 5),
 ):
     """Plot synchronous and asynchronous 2DCOS matrices side-by-side.
 
@@ -180,7 +180,7 @@ def plot_sync_async(
             f"sync and asyn must have the same shape; got {sync.shape} and {asyn.shape}"
         )
 
-    fig, axes = plt.subplots(1, 2, figsize=figzise, layout="constrained")
+    fig, axes = plt.subplots(1, 2, figsize=figsize, layout="constrained")
     plot_contour(
         sync,
         wavenumbers,
