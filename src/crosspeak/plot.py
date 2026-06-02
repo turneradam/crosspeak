@@ -36,6 +36,7 @@ def plot_contour(
     cmap: str = "vlag",
     n_levels: int = 50,
     descending: bool = True,
+    mask_diagonal: bool = False,
 ):
     """...
 
@@ -54,6 +55,10 @@ def plot_contour(
     """
     if wavenumbers_x is None:
         wavenumbers_x = wavenumbers
+
+    if mask_diagonal and matrix.shape[0] == matrix.shape[1]:
+        matrix = matrix.astype(float, copy=True)
+        np.fill_diagonal(matrix, np.nan)
 
     matrix = np.asarray(matrix)
     wavenumbers = np.asarray(wavenumbers)
@@ -78,10 +83,10 @@ def plot_contour(
         )
 
     if ax is None:
-        _, ax = plt.subplots(figsize=(6, 5))
+        _, ax = plt.subplots(layout="constrained")
 
     # Pin zero to the middle of the diverging colormap regardless of data asymmetry
-    vmax = np.max(np.abs(matrix))
+    vmax = np.nanmax(np.abs(matrix))
     if vmax == 0:
         vmax = 1.0
     norm = TwoSlopeNorm(vmin=-vmax, vcenter=0, vmax=vmax)
@@ -122,3 +127,81 @@ def plot_contour(
     plt.colorbar(cf, ax=ax, label="Correlation intensity")
 
     return ax
+
+
+def plot_sync_async(
+    sync: np.ndarray,
+    asyn: np.ndarray,
+    wavenumbers: np.ndarray,
+    *,
+    wavenumbers_x: np.ndarray | None = None,
+    title: str | None = None,
+    cmap: str = "vlag",
+    n_levels: int = 50,
+    descending: bool = True,
+    figzise: tuple[float, float] = (12, 5),
+):
+    """Plot synchronous and asynchronous 2DCOS matrices side-by-side.
+
+    Convenience wrapper around two `plot_contour` calls. The asynchronous
+    panel has its diagonal masked automatically. Figure uses constrained
+    layout, so colorbars and titles don't crowd the plot area.
+
+    Parameters
+    ----------
+    sync
+        Synchronous correlation matrix.
+    asyn
+        Asynchronous correlation matrix. Must have the same shape as `sync`.
+    wavenumbers
+        Wavenumber axis values for matrix axis 0 (y-axis of both panels).
+    wavenumbers_x
+        Optional. Wavenumber axis values for matrix axis 1 (x-axis). If None,
+        `wavenumbers` is used for both axes (homospectral). For heterospectral
+        plots, supply the second wavenumber axis here.
+    title
+        Optional figure-level title (suptitle).
+    cmap, n_levels, descending, figsize
+        Passed through to `plot_contour` / `plt.subplots` as expected.
+
+    Returns
+    -------
+    (fig, axes)
+        `axes` is a length-2 numpy array of matplotlib Axes. Unpack as
+        `fig, (ax_sync, ax_async) = plot_sync_async(...)` to reference each.
+
+    Raises
+    ------
+    ValueError
+        If `sync` and `asyn` have different shapes.
+    """
+    if sync.shape != asyn.shape:
+        raise ValueError(
+            f"sync and asyn must have the same shape; got {sync.shape} and {asyn.shape}"
+        )
+
+    fig, axes = plt.subplots(1, 2, figsize=figzise, layout="constrained")
+    plot_contour(
+        sync,
+        wavenumbers,
+        wavenumbers_x=wavenumbers_x,
+        ax=axes[0],
+        title="Synchronous",
+        cmap=cmap,
+        n_levels=n_levels,
+        descending=descending,
+    )
+    plot_contour(
+        asyn,
+        wavenumbers,
+        wavenumbers_x=wavenumbers_x,
+        ax=axes[1],
+        title="Asynchronous",
+        cmap=cmap,
+        n_levels=n_levels,
+        descending=descending,
+        mask_diagonal=True,
+    )
+    if title is not None:
+        fig.suptitle(title)
+    return fig, axes

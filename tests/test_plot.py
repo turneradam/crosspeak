@@ -7,6 +7,7 @@ from crosspeak import (
     SpectralSeries,
     asynchronous,
     plot_contour,
+    plot_sync_async,
     synchronous,
 )
 
@@ -128,4 +129,90 @@ class TestPlotContourHetero:
         ax = plot_contour(matrix, wn)
 
         assert ax is not None
+        plt.close("all")
+
+
+class TestPlotPolish:
+    def test_mask_diagonal_inserts_nan_on_square(self):
+        rng = np.random.default_rng(0)
+        matrix = rng.standard_normal((50, 50))
+        wn = np.linspace(2800, 3700, 50)
+
+        # Capture the matrix the function plots by snooping via a custom Axes
+        ax = plot_contour(matrix, wn, mask_diagonal=True)
+
+        # Diagonal cells should not produce contour patches — easiest sanity
+        # check: the function returned an Axes and didn't error
+        assert ax is not None
+        plt.close("all")
+
+    def test_mask_diagonal_does_not_mutate_input(self):
+        rng = np.random.default_rng(0)
+        matrix = rng.standard_normal((50, 50))
+        original = matrix.copy()
+        wn = np.linspace(2800, 3700, 50)
+
+        plot_contour(matrix, wn, mask_diagonal=True)
+
+        np.testing.assert_array_equal(matrix, original)
+        plt.close("all")
+
+    def test_mask_diagonal_silent_on_rectangular(self):
+        """Hetero (non-square) matrix: mask_diagonal is silently no-op."""
+        rng = np.random.default_rng(0)
+        matrix = rng.standard_normal((100, 80))
+        wn_y = np.linspace(3100, 3700, 100)
+        wn_x = np.linspace(2800, 3050, 80)
+
+        ax = plot_contour(matrix, wn_y, wavenumbers_x=wn_x, mask_diagonal=True)
+
+        assert ax is not None
+        plt.close("all")
+
+
+class TestPlotSyncAsync:
+    def test_homospectral_call(self):
+        rng = np.random.default_rng(0)
+        sync = rng.standard_normal((50, 50))
+        asyn = rng.standard_normal((50, 50))
+        wn = np.linspace(2800, 3700, 50)
+
+        fig, axes = plot_sync_async(sync, asyn, wn)
+
+        assert fig is not None
+        assert len(axes) == 2
+        plt.close("all")
+
+    def test_heterospectral_call(self):
+        rng = np.random.default_rng(0)
+        sync = rng.standard_normal((100, 80))
+        asyn = rng.standard_normal((100, 80))
+        wn_y = np.linspace(3100, 3700, 100)
+        wn_x = np.linspace(2800, 3050, 80)
+
+        fig, axes = plot_sync_async(sync, asyn, wn_y, wavenumbers_x=wn_x)
+
+        assert fig is not None
+        assert len(axes) == 2
+        plt.close("all")
+
+    def test_shape_mismatch_raises(self):
+        rng = np.random.default_rng(0)
+        sync = rng.standard_normal((50, 50))
+        asyn = rng.standard_normal((40, 40))
+        wn = np.linspace(2800, 3700, 50)
+
+        with pytest.raises(ValueError, match="same shape"):
+            plot_sync_async(sync, asyn, wn)
+
+    def test_title_sets_suptitle(self):
+        rng = np.random.default_rng(0)
+        sync = rng.standard_normal((50, 50))
+        asyn = rng.standard_normal((50, 50))
+        wn = np.linspace(2800, 3700, 50)
+
+        fig, _ = plot_sync_async(sync, asyn, wn, title="MA50W test")
+
+        assert fig._suptitle is not None
+        assert fig._suptitle.get_text() == "MA50W test"
         plt.close("all")

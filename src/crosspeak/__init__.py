@@ -14,7 +14,7 @@ from crosspeak.noda import (
     synchronous,
     synchronous_hetero,
 )
-from crosspeak.plot import plot_contour
+from crosspeak.plot import plot_contour, plot_sync_async
 from crosspeak.preprocess import (
     area_normalize,
     crop_region,
@@ -35,6 +35,7 @@ __all__ = [
     "hilbert_noda_matrix",
     "mean_center",
     "plot_contour",
+    "plot_sync_async",
     "read_series",
     "read_spectrum",
     "reference_spectrum",
