@@ -150,3 +150,86 @@ def area_normalize(
         intensities=normalized,
         name=series.name,
     )
+
+
+def vector_normalize(series: SpectralSeries) -> SpectralSeries:
+    """Scale each spectrum to unit Euclidean (L2) norm.
+
+    For each perturbation row, divides the intensities by their L2 norm,
+    removing per-spectrum multiplicative scaling without assuming a stable
+    reference band. Corrects ATR sample-loading and contact variation before
+    correlation.
+
+    Parameters
+    ----------
+    series
+        Input SpectralSeries. The norm is computed over the full wavenumber
+        range of the passed series; crop first to restrict it.
+
+    Returns
+    -------
+    SpectralSeries
+        New SpectralSeries with unit-norm rows. Metadata preserved.
+
+    Raises
+    ------
+    ValueError
+        If any row has zero norm (an all-zero spectrum).
+    """
+    norms = np.linalg.norm(series.intensities, axis=-1)
+
+    if (norms == 0).any():
+        zero_rows = np.where(norms == 0)[0].tolist()
+        raise ValueError(f"zero norm on perturbation rows {zero_rows}; cannot normalize")
+
+    normalized = series.intensities / norms[:, None]
+
+    return SpectralSeries(
+        wavenumbers=series.wavenumbers,
+        perturbations=series.perturbations,
+        intensities=normalized,
+        name=series.name,
+    )
+
+
+def snv(series: SpectralSeries) -> SpectralSeries:
+    """Apply the standard normal variate (SNV) transform to each spectrum.
+
+    For each perturbation row, subtracts the row mean and divides by the row
+    sample standard deviation (ddof=1). Removes both an additive baseline
+    offset and a multiplicative scale per spectrum, without assuming a stable
+    reference band.
+
+    Parameters
+    ----------
+    series
+        Input SpectralSeries. The transform is computed over the full
+        wavenumber range of the passed series; crop first to restrict it.
+
+    Returns
+    -------
+    SpectralSeries
+        New SpectralSeries with SNV-transformed rows. Metadata preserved.
+
+    Raises
+    ------
+    ValueError
+        If any row has zero standard deviation (a flat spectrum).
+    """
+    means = series.intensities.mean(axis=-1, keepdims=True)
+    stds = series.intensities.std(axis=-1, ddof=1, keepdims=True)
+
+    if (stds == 0).any():
+        zero_rows = np.where(stds.ravel() == 0)[0].tolist()
+        raise ValueError(
+            f"zero standard deviation on perturbation rows {zero_rows}; cannot apply SNV"
+        )
+
+    transformed = (series.intensities - means) / stds
+
+    return SpectralSeries(
+        wavenumbers=series.wavenumbers,
+        perturbations=series.perturbations,
+        intensities=transformed,
+        name=series.name,
+    )

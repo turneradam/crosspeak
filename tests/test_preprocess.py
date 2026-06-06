@@ -1,7 +1,7 @@
 import numpy as np
 import pytest
 
-from crosspeak import SpectralSeries
+from crosspeak import SpectralSeries, snv, vector_normalize
 from crosspeak.preprocess import (
     area_normalize,
     crop_region,
@@ -384,6 +384,155 @@ class TestAreaNormalize:
         series = self._series()
         normalized = area_normalize(series)
         phi = synchronous(normalized)
+
+        assert phi.shape == (series.n_wavenumbers, series.n_wavenumbers)
+        assert (np.diag(phi) >= 0).all()
+
+
+class TestVectorNormalize:
+    def _series(self, wn=None, intensities=None, perturbations=None, name="test"):
+        if wn is None:
+            wn = np.linspace(2800, 3700, 200)
+        if perturbations is None:
+            perturbations = np.arange(4, dtype=float)
+        if intensities is None:
+            base = np.exp(-((wn - 3300) ** 2) / (2 * 50**2))
+            intensities = (perturbations + 1)[:, None] * base[None, :]
+        return SpectralSeries(
+            wavenumbers=wn,
+            perturbations=perturbations,
+            intensities=intensities,
+            name=name,
+        )
+
+    def test_unit_norm(self):
+        series = self._series()
+        normalized = vector_normalize(series)
+
+        norms = np.linalg.norm(normalized.intensities, axis=-1)
+        np.testing.assert_allclose(norms, 1.0, atol=1e-12)
+
+    def test_scalar_multiples_map_to_same_unit_vector(self):
+        # Every input row is (p+1) * the same band -> identical after L2 norm
+        series = self._series()
+        normalized = vector_normalize(series)
+
+        np.testing.assert_allclose(
+            normalized.intensities[0], normalized.intensities[-1], atol=1e-12
+        )
+
+    def test_metadata_preserved(self):
+        series = self._series()
+        normalized = vector_normalize(series)
+
+        np.testing.assert_array_equal(normalized.wavenumbers, series.wavenumbers)
+        np.testing.assert_array_equal(normalized.perturbations, series.perturbations)
+        assert normalized.name == series.name
+
+    def test_original_unchanged(self):
+        series = self._series()
+        original = series.intensities.copy()
+
+        _ = vector_normalize(series)
+
+        np.testing.assert_array_equal(series.intensities, original)
+
+    def test_zero_norm_raises(self):
+        wn = np.linspace(2800, 3700, 200)
+        intensities = np.ones((3, 200))
+        intensities[1] = 0.0
+        series = SpectralSeries(
+            wavenumbers=wn,
+            perturbations=np.arange(3, dtype=float),
+            intensities=intensities,
+            name="test",
+        )
+
+        with pytest.raises(ValueError, match="zero norm"):
+            vector_normalize(series)
+
+    def test_pipeline_normalize_then_synchronous(self):
+        from crosspeak import synchronous
+
+        series = self._series()
+        phi = synchronous(vector_normalize(series))
+
+        assert phi.shape == (series.n_wavenumbers, series.n_wavenumbers)
+        assert (np.diag(phi) >= 0).all()
+
+
+class TestSnv:
+    def _series(self, wn=None, intensities=None, perturbations=None, name="test"):
+        if wn is None:
+            wn = np.linspace(2800, 3700, 200)
+        if perturbations is None:
+            perturbations = np.arange(4, dtype=float)
+        if intensities is None:
+            base = np.exp(-((wn - 3300) ** 2) / (2 * 50**2))
+            # offset by 0.5 so the additive-removal test has something to remove
+            intensities = (perturbations + 1)[:, None] * base[None, :] + 0.5
+        return SpectralSeries(
+            wavenumbers=wn,
+            perturbations=perturbations,
+            intensities=intensities,
+            name=name,
+        )
+
+    def test_zero_mean_unit_std(self):
+        series = self._series()
+        out = snv(series)
+
+        means = out.intensities.mean(axis=-1)
+        stds = out.intensities.std(axis=-1, ddof=1)
+        np.testing.assert_allclose(means, 0.0, atol=1e-12)
+        np.testing.assert_allclose(stds, 1.0, atol=1e-12)
+
+    def test_invariant_to_affine_rescaling(self):
+        """SNV(a*x + b) == SNV(x) for a > 0 -- removes offset and scale."""
+        series = self._series()
+        rescaled = SpectralSeries(
+            wavenumbers=series.wavenumbers,
+            perturbations=series.perturbations,
+            intensities=3.0 * series.intensities + 7.0,
+            name=series.name,
+        )
+
+        np.testing.assert_allclose(snv(series).intensities, snv(rescaled).intensities, atol=1e-12)
+
+    def test_metadata_preserved(self):
+        series = self._series()
+        out = snv(series)
+
+        np.testing.assert_array_equal(out.wavenumbers, series.wavenumbers)
+        np.testing.assert_array_equal(out.perturbations, series.perturbations)
+        assert out.name == series.name
+
+    def test_original_unchanged(self):
+        series = self._series()
+        original = series.intensities.copy()
+
+        _ = snv(series)
+
+        np.testing.assert_array_equal(series.intensities, original)
+
+    def test_zero_std_raises(self):
+        wn = np.linspace(2800, 3700, 200)
+        intensities = np.ones((3, 200))  # every row flat -> zero std
+        series = SpectralSeries(
+            wavenumbers=wn,
+            perturbations=np.arange(3, dtype=float),
+            intensities=intensities,
+            name="test",
+        )
+
+        with pytest.raises(ValueError, match="zero standard deviation"):
+            snv(series)
+
+    def test_pipeline_snv_then_synchronous(self):
+        from crosspeak import synchronous
+
+        series = self._series()
+        phi = synchronous(snv(series))
 
         assert phi.shape == (series.n_wavenumbers, series.n_wavenumbers)
         assert (np.diag(phi) >= 0).all()

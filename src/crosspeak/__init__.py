@@ -1,8 +1,6 @@
 """crosspeak — generalized 2D correlation spectroscopy for vibrational spectra."""
 
-from importlib.metadata import version
-
-__version__ = version("crosspeak")
+__version__ = "0.0.1"
 
 from crosspeak.io import read_series, read_spectrum, regrid_spectrum
 from crosspeak.noda import (
@@ -21,6 +19,8 @@ from crosspeak.preprocess import (
     mean_center,
     reference_spectrum,
     savgol_smooth,
+    snv,
+    vector_normalize,
 )
 from crosspeak.series import SpectralSeries
 
@@ -41,6 +41,8 @@ __all__ = [
     "reference_spectrum",
     "regrid_spectrum",
     "savgol_smooth",
+    "snv",
     "synchronous",
     "synchronous_hetero",
+    "vector_normalize",
 ]
