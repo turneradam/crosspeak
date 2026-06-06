@@ -33,7 +33,11 @@ path = "src/crosspeak/__init__.py"
 packages = ["src/crosspeak"]
 
 [dependency-groups]
-dev = ["pytest>=8", "ruff>=0.6"]
+dev = [
+    "pandas>=3.0.3",
+    "pytest>=8",
+    "ruff>=0.6",
+]
 
 [tool.ruff]
 line-length = 100
