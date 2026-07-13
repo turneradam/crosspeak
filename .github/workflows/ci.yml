@@ -12,9 +12,7 @@ jobs:
 
     steps:
     - uses: actions/checkout@v4
-    - uses: astral-sh/setup-uv@v3
-      with:
-        python-version: "3.12"
+    - uses: astral-sh/setup-uv@v5
     - run: uv sync
     - run: uv run ruff check src tests
     - run: uv run ruff format --check src tests
