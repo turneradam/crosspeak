@@ -1,0 +1,25 @@
+cff-version: 1.2.0
+message: "If you use this software, please cite it using these metadata."
+title: crosspeak
+abstract: >-
+  Generalized two-dimensional correlation spectroscopy (2DCOS) for vibrational
+  spectra: synchronous and asynchronous maps via the Hilbert-Noda transform,
+  heterospectral and moving-window correlation, preprocessing, and plotting.
+type: software
+authors:
+  - given-names: Adam H.
+    family-names: Turner
+    orcid: "https://orcid.org/0000-0002-0579-7982"
+    affiliation: Ateneo de Manila University
+version: 1.0.0
+date-released: 2026-07-13
+url: "https://turneradam.github.io/crosspeak/"
+repository-code: "https://github.com/turneradam/crosspeak"
+license: MIT
+keywords:
+  - two-dimensional correlation spectroscopy
+  - 2DCOS
+  - vibrational spectroscopy
+  - infrared spectroscopy
+  - chemometrics
+  - Python
