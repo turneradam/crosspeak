@@ -37,6 +37,12 @@ dev = [
     "pandas>=3.0.3",
     "pytest>=8",
     "ruff>=0.6",
+    "nbmake>=1.5",
+]
+docs = [
+    "mkdocs-material>=9.5",
+    "mkdocstrings[python]>=0.26",
+    "mkdocs-jupyter>=0.25",
 ]
 
 [tool.ruff]

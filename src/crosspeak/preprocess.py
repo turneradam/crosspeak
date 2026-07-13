@@ -5,10 +5,52 @@ from crosspeak.series import SpectralSeries
 
 
 def reference_spectrum(series):
+    """The reference spectrum subtracted to form the dynamic spectrum.
+
+    Returns the perturbation-mean spectrum — the average intensity at each
+    wavenumber across all perturbation points. This is the reference that
+    `mean_center` subtracts, and the choice that makes the correlation
+    intensities pure covariances.
+
+    Noda's formalism allows any reference (the first spectrum, an external
+    one), but the mean is the conventional pick: it centres the series so that
+    every deviation the correlation sees is a genuine departure from the
+    average state, not an artefact of which spectrum you happened to choose as
+    the baseline.
+
+    Parameters
+    ----------
+    series
+        A `SpectralSeries`.
+
+    Returns
+    -------
+    np.ndarray
+        The mean spectrum, shape `(n_wavenumbers,)`.
+    """
     return series.intensities.mean(axis=0)
 
 
 def mean_center(series):
+    """Subtract the reference spectrum to form the dynamic spectrum.
+
+    Replaces each spectrum with its deviation from the perturbation mean — the
+    dynamic spectrum Ỹ in Noda's notation. This is the first step of every
+    correlation calculation: `synchronous` and `asynchronous` mean-centre
+    internally, so you rarely call this yourself, but it is exposed for when you
+    want the centred series in hand to inspect or plot.
+
+    Parameters
+    ----------
+    series
+        A `SpectralSeries`.
+
+    Returns
+    -------
+    SpectralSeries
+        A new series of mean-centred intensities; wavenumbers, perturbations,
+        and name preserved. The original is untouched.
+    """
     reference = reference_spectrum(series)
     dynamic = series.intensities - reference
     return SpectralSeries(

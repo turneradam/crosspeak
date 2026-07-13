@@ -1,0 +1,49 @@
+site_name: crosspeak
+site_description: Generalized 2D correlation spectroscopy for vibrational spectra
+site_url: https://turneradam.github.io/crosspeak/
+repo_url: https://github.com/turneradam/crosspeak
+repo_name: turneradam/crosspeak
+
+theme:
+  name: material
+  features: [navigation.sections, content.code.copy]
+  palette:
+    - scheme: default
+      toggle: {icon: material/weather-night, name: Dark mode}
+    - scheme: slate
+      toggle: {icon: material/weather-sunny, name: Light mode}
+
+plugins:
+  - search
+  - mkdocstrings:
+      handlers:
+        python:
+          paths: [src]
+          options:
+            docstring_style: numpy
+            show_source: true
+            show_root_heading: true
+            members_order: source
+  - mkdocs-jupyter:
+      execute: false
+      include: ["*.ipynb"]
+
+nav:
+  - Home: index.md
+  - Tutorials:
+      - Synthetic kinetics: tutorials/synthetic.ipynb
+  - API reference:
+      - series: api/series.md
+      - io: api/io.md
+      - preprocess: api/preprocess.md
+      - noda: api/noda.md
+      - plot: api/plot.md
+
+markdown_extensions:
+  - admonition
+  - pymdownx.highlight
+  - pymdownx.superfences
+  - pymdownx.arithmatex: {generic: true}
+
+extra_javascript:
+  - https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js

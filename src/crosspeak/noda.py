@@ -7,6 +7,28 @@ from crosspeak.series import SpectralSeries
 
 
 def hilbert_noda_matrix(n):
+    """The Hilbert-Noda matrix for `n` perturbation points.
+
+    The discrete kernel that turns the asynchronous calculation into a matrix
+    product: with N in hand, Ψ = Y^T @ N @ Y / (m - 1). Off the diagonal
+    N_jk = 1 / (π(k - j)); the diagonal is zero, since a point has no phase
+    lag against itself.
+
+    The sign convention matters. With N positive in the upper triangle, a
+    positive Ψ(ν₁, ν₂) alongside a positive Φ means ν₁ leads ν₂ under Noda's
+    rules. Transpose N and every ordering flips — so if this ever gets swapped
+    out, check the sign against a sequence you already know.
+
+    Parameters
+    ----------
+    n
+        Number of perturbation points (m in the usual notation), at least 2.
+
+    Returns
+    -------
+    np.ndarray
+        The (n, n) matrix, antisymmetric with a zero diagonal.
+    """
     if not isinstance(n, (int, np.integer)):
         raise TypeError(f"n must be an integer, got {type(n).__name__}")
     if n < 2:
@@ -23,6 +45,24 @@ def hilbert_noda_matrix(n):
 
 
 def synchronous(series):
+    """Synchronous 2DCOS matrix Φ of a spectral series.
+
+    Φ(ν₁, ν₂) = Y^T @ Y / (m - 1) over the mean-centred intensities, which is
+    just the sample covariance across the perturbation. Large positive values
+    mean two wavenumbers rise and fall together; negative means they move in
+    opposition. The diagonal is the autopower spectrum — where the perturbation
+    does the most work.
+
+    Parameters
+    ----------
+    series
+        A `SpectralSeries` with at least two perturbation points.
+
+    Returns
+    -------
+    np.ndarray
+        The (n, n) synchronous matrix, symmetric by construction.
+    """
     if not isinstance(series, SpectralSeries):
         raise TypeError(f"expected SpectralSeries, got {type(series).__name__}")
 
@@ -32,6 +72,26 @@ def synchronous(series):
 
 
 def asynchronous(series):
+    """Asynchronous 2DCOS matrix Ψ of a spectral series.
+
+    Ψ(ν₁, ν₂) = Y^T @ N @ Y / (m - 1), with N the Hilbert-Noda matrix. Where Φ
+    says which bands move together, Ψ says in what order: read against the sign
+    of Φ, a nonzero Ψ resolves which of two overlapping features responds
+    first. Antisymmetric, with a zero diagonal.
+
+    Same mean-centring and conventions as `synchronous`; see
+    `hilbert_noda_matrix` for the sign that fixes the direction of the ordering.
+
+    Parameters
+    ----------
+    series
+        A `SpectralSeries` with at least two perturbation points.
+
+    Returns
+    -------
+    np.ndarray
+        The (n, n) asynchronous matrix.
+    """
     if not isinstance(series, SpectralSeries):
         raise TypeError(f"expected SpectralSeries, got {type(series).__name__}")
 

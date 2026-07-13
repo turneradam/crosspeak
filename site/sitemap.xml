@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+    <url>
+         <loc>https://turneradam.github.io/crosspeak/</loc>
+         <lastmod>2026-07-13</lastmod>
+    </url>
+    <url>
+         <loc>https://turneradam.github.io/crosspeak/api/io/</loc>
+         <lastmod>2026-07-13</lastmod>
+    </url>
+    <url>
+         <loc>https://turneradam.github.io/crosspeak/api/noda/</loc>
+         <lastmod>2026-07-13</lastmod>
+    </url>
+    <url>
+         <loc>https://turneradam.github.io/crosspeak/api/plot/</loc>
+         <lastmod>2026-07-13</lastmod>
+    </url>
+    <url>
+         <loc>https://turneradam.github.io/crosspeak/api/preprocess/</loc>
+         <lastmod>2026-07-13</lastmod>
+    </url>
+    <url>
+         <loc>https://turneradam.github.io/crosspeak/api/series/</loc>
+         <lastmod>2026-07-13</lastmod>
+    </url>
+    <url>
+         <loc>https://turneradam.github.io/crosspeak/tutorials/synthetic/</loc>
+         <lastmod>2026-07-13</lastmod>
+    </url>
+</urlset>

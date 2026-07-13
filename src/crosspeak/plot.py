@@ -51,7 +51,6 @@ def plot_contour(
         Optional. Wavenumber axis values for matrix axis 1 (cols, x-axis).
         Length must equal matrix.shape[1]. If None (default), `wavenumbers`
         is used for both axes — the standard homospectral case.
-    ...
     """
     if wavenumbers_x is None:
         wavenumbers_x = wavenumbers

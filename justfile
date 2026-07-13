@@ -25,3 +25,9 @@ release version:
     git tag v{{version}}
     git push origin v{{version}}
     gh release create v{{version}} --generate-notes
+
+docs-serve:
+    uv run mkdocs serve
+
+docs-build:
+    uv run mkdocs build --strict
