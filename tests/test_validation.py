@@ -90,9 +90,7 @@ class TestAlgebraicIdentities:
 
     def test_synchronous_equals_covariance(self, sim2d):
         # Phi is the sample covariance of the intensities across perturbation.
-        np.testing.assert_allclose(
-            synchronous(sim2d), np.cov(sim2d.intensities.T), atol=1e-14
-        )
+        np.testing.assert_allclose(synchronous(sim2d), np.cov(sim2d.intensities.T), atol=1e-14)
 
     def test_hilbert_noda_is_antisymmetric_with_zero_diagonal(self):
         for m in (2, 3, 8, 11):
@@ -118,18 +116,14 @@ class TestAlgebraicIdentities:
             np.testing.assert_allclose(asynchronous(series), 0.0, atol=1e-14)
 
     def test_heterospectral_with_self_reduces_to_homospectral(self, sim2d):
-        np.testing.assert_allclose(
-            synchronous_hetero(sim2d, sim2d), synchronous(sim2d), atol=1e-14
-        )
+        np.testing.assert_allclose(synchronous_hetero(sim2d, sim2d), synchronous(sim2d), atol=1e-14)
         np.testing.assert_allclose(
             asynchronous_hetero(sim2d, sim2d), asynchronous(sim2d), atol=1e-14
         )
 
     def test_scaling_the_data_scales_phi_quadratically(self, sim2d):
         scaled = _series(sim2d.intensities * 10.0)
-        np.testing.assert_allclose(
-            synchronous(scaled), synchronous(sim2d) * 100.0, rtol=1e-12
-        )
+        np.testing.assert_allclose(synchronous(scaled), synchronous(sim2d) * 100.0, rtol=1e-12)
 
 
 class TestNodaRules:
@@ -139,9 +133,7 @@ class TestNodaRules:
         # Band 1 responds quickly, band 2 slowly; both increase.
         # Noda: Phi > 0 and Psi > 0  =>  nu1 changes before nu2.
         t = np.linspace(0, 10, 40)
-        intensities = np.column_stack(
-            [1 - np.exp(-1.0 * t), 1 - np.exp(-0.15 * t)]
-        )
+        intensities = np.column_stack([1 - np.exp(-1.0 * t), 1 - np.exp(-0.15 * t)])
         series = _series(intensities)
         assert synchronous(series)[0, 1] > 0
         assert asynchronous(series)[0, 1] > 0
