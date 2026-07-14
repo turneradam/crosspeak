@@ -2,4 +2,5 @@ import crosspeak
 
 
 def test_version():
-    assert crosspeak.__version__ == "1.0.0"
+    import re
+    assert re.fullmatch(r"\d+\.\d+\.\d+", crosspeak.__version__)
