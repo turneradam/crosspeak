@@ -62,7 +62,7 @@ def mean_center(series):
 
 
 def crop_region(series: SpectralSeries, low: float, high: float) -> SpectralSeries:
-    """Return a new SpectralSeries restricted to a wavenumber range
+    """Return a new SpectralSeries restricted to a wavenumber range.
     Both bounds are inclusive. Does not modify original series.
     Wavenumber axis direction is maintained
     """
@@ -93,7 +93,7 @@ def savgol_smooth(
     polyorder: int = 3,
     **kwargs,
 ) -> SpectralSeries:
-    """Apply SavitzkyGolay smoothing along the wavenumber axis.
+    """Apply Savitzky-Golay smoothing along the wavenumber axis.
 
     Each spectrum (row) is smoothed independently. The original series is
     not modified.
