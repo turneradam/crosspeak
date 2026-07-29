@@ -101,6 +101,110 @@ def asynchronous(series):
     return (Y.T @ N @ Y) / (m - 1)
 
 
+class MovingWindowResult(NamedTuple):
+    """Correlation maps from a moving-window 2DCOS analysis.
+
+    Attributes
+    ----------
+    sync
+        Synchronous matrices, shape (n_windows, n_wavenumbers, n_wavenumbers).
+    asyn
+        Asynchronous matrices, same shape.
+    centres
+        Perturbation value at the middle of each window, shape (n_windows,).
+    """
+
+    sync: np.ndarray
+    asyn: np.ndarray
+    centres: np.ndarray
+
+
+def moving_window(
+    series: SpectralSeries,
+    *,
+    window_size: int = 5,
+) -> MovingWindowResult:
+    """Moving-window 2DCOS: correlation over a sliding perturbation window.
+
+    Full-range 2DCOS gives one pair of maps summarising the whole series, which
+    hides *when* things happened — a system that reorganises in two stages
+    produces a single map with both stages blended into it. Moving-window
+    analysis slides a short window along the perturbation axis and correlates
+    within each position, so features can be seen switching on and off as the
+    perturbation advances.
+
+    Each window is mean-centred against its own local mean rather than the mean
+    of the whole series. That is what makes the result local.
+
+    The window is constant in *index*, not in perturbation value. For an
+    unevenly sampled series — water contents of 0, 1, 2, 5, 10, 15, 20, 30, say
+    — a five-point window spans 0 to 10 at one end and 10 to 30 at the other.
+    This is the standard formulation, but it means `centres` should be read
+    alongside the maps rather than assumed evenly spaced.
+
+    Short windows localise sharply but leave few points to correlate, and the
+    asynchronous map degrades first. Windows of 5 to 11 points are usual.
+
+    Parameters
+    ----------
+    series
+        A `SpectralSeries`. Crop to the region of interest first: the result
+        holds two (n, n) matrices per window position, so an uncropped spectrum
+        can run to tens of megabytes per window.
+    window_size
+        Perturbation points per window. Must be odd, at least 3, and no larger
+        than the series. Default 5. Noda writes this as 2m+1, so 5 is m=2.
+
+    Returns
+    -------
+    MovingWindowResult
+        Named tuple of (sync, asyn, centres), with
+        `n_windows = n_perturbations - window_size + 1`.
+
+    Raises
+    ------
+    ValueError
+        If `window_size` is even, below 3, or larger than the series.
+    """
+    if not isinstance(series, SpectralSeries):
+        raise TypeError(f"expected SpectralSeries, got {type(series).__name__}")
+    if not isinstance(window_size, (int, np.integer)):
+        raise TypeError(f"window_size must be an integer, got {type(window_size).__name__}")
+    if window_size % 2 == 0:
+        raise ValueError(f"window_size must be odd, got {window_size}")
+    if window_size < 3:
+        raise ValueError(f"window_size must be at least 3, got {window_size}")
+
+    m = series.n_perturbations
+    if window_size > m:
+        raise ValueError(
+            f"window_size ({window_size}) exceeds the number of perturbation points ({m})"
+        )
+
+    n_windows = m - window_size + 1
+    n_wavenumbers = series.n_wavenumbers
+    half = window_size // 2
+
+    sync = np.empty((n_windows, n_wavenumbers, n_wavenumbers))
+    asyn = np.empty((n_windows, n_wavenumbers, n_wavenumbers))
+
+    for i in range(n_windows):
+        window = SpectralSeries(
+            wavenumbers=series.wavenumbers,
+            perturbations=series.perturbations[i : i + window_size],
+            intensities=series.intensities[i : i + window_size],
+            name=series.name,
+        )
+        sync[i] = synchronous(window)
+        asyn[i] = asynchronous(window)
+
+    return MovingWindowResult(
+        sync=sync,
+        asyn=asyn,
+        centres=series.perturbations[half : half + n_windows],
+    )
+
+
 class AutopeakResult(NamedTuple):
     """Autopeaks found on a synchronous diagonal.
 

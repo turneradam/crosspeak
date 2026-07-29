@@ -5,10 +5,12 @@ __version__ = "1.0.0"
 from crosspeak.io import read_series, read_spectrum, regrid_spectrum
 from crosspeak.noda import (
     AutopeakResult,
+    MovingWindowResult,
     asynchronous,
     asynchronous_hetero,
     find_autopeaks,
     hilbert_noda_matrix,
+    moving_window,
     synchronous,
     synchronous_hetero,
 )
@@ -26,6 +28,7 @@ from crosspeak.series import SpectralSeries
 
 __all__ = [
     "AutopeakResult",
+    "MovingWindowResult",
     "SpectralSeries",
     "area_normalize",
     "asynchronous",
@@ -34,6 +37,7 @@ __all__ = [
     "find_autopeaks",
     "hilbert_noda_matrix",
     "mean_center",
+    "moving_window",
     "plot_contour",
     "plot_sync_async",
     "read_series",
