@@ -8,6 +8,7 @@ from crosspeak import (
     asynchronous_hetero,
     find_autopeaks,
     hilbert_noda_matrix,
+    moving_window,
     synchronous,
     synchronous_hetero,
 )
@@ -438,3 +439,89 @@ class TestHeterospectral:
         psi_hetero = asynchronous_hetero(s1, s1)
         psi_homo = asynchronous(s1)
         np.testing.assert_allclose(psi_hetero, psi_homo, atol=1e-12)
+
+
+class TestMovingWindow:
+    @staticmethod
+    def _series(intensities, perturbations=None):
+        m, n = intensities.shape
+        return SpectralSeries(
+            wavenumbers=np.linspace(3000.0, 3700.0, n),
+            perturbations=(
+                np.arange(m, dtype=float)
+                if perturbations is None
+                else np.asarray(perturbations, dtype=float)
+            ),
+            intensities=intensities,
+            name="mw",
+        )
+
+    def test_shapes_and_window_count(self):
+        rng = np.random.default_rng(0)
+        series = self._series(rng.standard_normal((11, 6)))
+        result = moving_window(series, window_size=5)
+        assert result.sync.shape == (7, 6, 6)
+        assert result.asyn.shape == (7, 6, 6)
+        assert result.centres.shape == (7,)
+
+    def test_centres_track_uneven_perturbations(self):
+        # A five-point window on this grid spans 0-10 at one end and 10-30 at
+        # the other; the centres are what tell you that.
+        water = [0, 1, 2, 5, 10, 15, 20, 30]
+        rng = np.random.default_rng(1)
+        series = self._series(rng.standard_normal((8, 4)), perturbations=water)
+        result = moving_window(series, window_size=5)
+        np.testing.assert_array_equal(result.centres, [2.0, 5.0, 10.0, 15.0])
+
+    def test_full_width_window_reduces_to_full_range(self):
+        rng = np.random.default_rng(2)
+        series = self._series(rng.standard_normal((7, 5)))
+        result = moving_window(series, window_size=7)
+        assert result.sync.shape[0] == 1
+        np.testing.assert_allclose(result.sync[0], synchronous(series), atol=1e-14)
+        np.testing.assert_allclose(result.asyn[0], asynchronous(series), atol=1e-14)
+
+    def test_each_window_satisfies_the_usual_invariants(self):
+        rng = np.random.default_rng(3)
+        series = self._series(rng.standard_normal((9, 4)))
+        result = moving_window(series, window_size=5)
+        for phi, psi in zip(result.sync, result.asyn):
+            np.testing.assert_allclose(phi, phi.T, atol=1e-14)
+            np.testing.assert_allclose(psi, -psi.T, atol=1e-14)
+            np.testing.assert_allclose(np.diag(psi), 0.0, atol=1e-14)
+
+    def test_localises_a_two_stage_process(self):
+        # Band A changes only over the first half of the series, band B only
+        # over the second. A full-range map blends them; the windows separate
+        # them, which is the whole point of the method.
+        t = np.arange(11, dtype=float)
+        band_a = np.clip(t, 0, 5)
+        band_b = np.clip(t - 5, 0, None)
+        series = self._series(np.column_stack([band_a, band_b]))
+
+        result = moving_window(series, window_size=5)
+
+        early, late = result.sync[0], result.sync[-1]
+        assert early[0, 0] > 0  # A active in the first window
+        assert early[1, 1] == pytest.approx(0.0, abs=1e-14)
+        assert late[1, 1] > 0  # B active in the last
+        assert late[0, 0] == pytest.approx(0.0, abs=1e-14)
+
+    def test_even_window_raises(self):
+        series = self._series(np.random.default_rng(4).standard_normal((9, 3)))
+        with pytest.raises(ValueError, match="odd"):
+            moving_window(series, window_size=4)
+
+    def test_window_below_three_raises(self):
+        series = self._series(np.random.default_rng(5).standard_normal((9, 3)))
+        with pytest.raises(ValueError, match="at least 3"):
+            moving_window(series, window_size=1)
+
+    def test_window_larger_than_series_raises(self):
+        series = self._series(np.random.default_rng(6).standard_normal((5, 3)))
+        with pytest.raises(ValueError, match="exceeds"):
+            moving_window(series, window_size=7)
+
+    def test_non_series_input_raises(self):
+        with pytest.raises(TypeError, match="SpectralSeries"):
+            moving_window(np.zeros((9, 3)))
