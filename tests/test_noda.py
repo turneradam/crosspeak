@@ -485,7 +485,7 @@ class TestMovingWindow:
         rng = np.random.default_rng(3)
         series = self._series(rng.standard_normal((9, 4)))
         result = moving_window(series, window_size=5)
-        for phi, psi in zip(result.sync, result.asyn):
+        for phi, psi in zip(result.sync, result.asyn, strict=True):
             np.testing.assert_allclose(phi, phi.T, atol=1e-14)
             np.testing.assert_allclose(psi, -psi.T, atol=1e-14)
             np.testing.assert_allclose(np.diag(psi), 0.0, atol=1e-14)
