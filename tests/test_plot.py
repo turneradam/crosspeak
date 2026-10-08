@@ -112,10 +112,10 @@ class TestPlotContourHetero:
     def test_rectangular_matrix_accepted(self):
         rng = np.random.default_rng(0)
         matrix = rng.standard_normal((100, 80))
-        wn_y = np.linspace(3100, 3700, 100)
-        wn_x = np.linspace(2800, 3050, 80)
+        wn_1 = np.linspace(3100, 3700, 100)
+        wn_2 = np.linspace(2800, 3050, 80)
 
-        ax = plot_contour(matrix, wn_y, wavenumbers_x=wn_x)
+        ax = plot_contour(matrix, wn_1, wavenumbers_2=wn_2)
 
         assert ax is not None
         plt.close("all")
@@ -161,10 +161,10 @@ class TestPlotPolish:
         """Hetero (non-square) matrix: mask_diagonal is silently no-op."""
         rng = np.random.default_rng(0)
         matrix = rng.standard_normal((100, 80))
-        wn_y = np.linspace(3100, 3700, 100)
-        wn_x = np.linspace(2800, 3050, 80)
+        wn_1 = np.linspace(3100, 3700, 100)
+        wn_2 = np.linspace(2800, 3050, 80)
 
-        ax = plot_contour(matrix, wn_y, wavenumbers_x=wn_x, mask_diagonal=True)
+        ax = plot_contour(matrix, wn_1, wavenumbers_2=wn_2, mask_diagonal=True)
 
         assert ax is not None
         plt.close("all")
@@ -187,10 +187,10 @@ class TestPlotSyncAsync:
         rng = np.random.default_rng(0)
         sync = rng.standard_normal((100, 80))
         asyn = rng.standard_normal((100, 80))
-        wn_y = np.linspace(3100, 3700, 100)
-        wn_x = np.linspace(2800, 3050, 80)
+        wn_1 = np.linspace(3100, 3700, 100)
+        wn_2 = np.linspace(2800, 3050, 80)
 
-        fig, axes = plot_sync_async(sync, asyn, wn_y, wavenumbers_x=wn_x)
+        fig, axes = plot_sync_async(sync, asyn, wn_1, wavenumbers_2=wn_2)
 
         assert fig is not None
         assert len(axes) == 2
@@ -216,3 +216,81 @@ class TestPlotSyncAsync:
         assert fig._suptitle is not None
         assert fig._suptitle.get_text() == "MA50W test"
         plt.close("all")
+
+
+def _lead_lag_series():
+    # The band at 1300 responds early and the one at 1100 late, both growing,
+    # so Phi(1300, 1100) > 0 and Psi(1300, 1100) > 0 under Noda's rules.
+    t = np.linspace(0, 10, 21)
+    wn = np.linspace(1000, 1400, 201)
+
+    def band(centre):
+        return np.exp(-0.5 * ((wn - centre) / 15) ** 2)
+
+    intensities = np.outer(1 - np.exp(-1.0 * t), band(1300)) + np.outer(
+        1 - np.exp(-0.15 * t), band(1100)
+    )
+    return SpectralSeries(wavenumbers=wn, perturbations=t, intensities=intensities, name="lag")
+
+
+def _sign_rendered_at(ax, x, y):
+    ax.figure.canvas.draw()
+    image = np.asarray(ax.figure.canvas.buffer_rgba())[..., :3].astype(int)
+    px, py = ax.transData.transform((x, y))
+    red, _, blue = image[round(image.shape[0] - py), round(px)]
+    return "positive" if red > blue else "negative"
+
+
+class TestOrientation:
+    """Matrix rows (nu1) are drawn on x, columns (nu2) on y."""
+
+    def test_asynchronous_sign_renders_where_it_is_read(self):
+        # Regression: the matrix used to be drawn untransposed, so the point
+        # read as (nu1=1300, nu2=1100) showed Psi(1100, 1300) -- the wrong sign,
+        # inverting every sequential-order conclusion.
+        series = _lead_lag_series()
+        psi = asynchronous(series)
+        i = np.abs(series.wavenumbers - 1300).argmin()
+        j = np.abs(series.wavenumbers - 1100).argmin()
+        assert psi[i, j] > 0  # premise: Psi(1300, 1100) > 0 in the array
+        ax = plot_contour(psi, series.wavenumbers, mask_diagonal=True)
+        assert _sign_rendered_at(ax, 1300, 1100) == "positive"
+        assert _sign_rendered_at(ax, 1100, 1300) == "negative"
+
+    def test_heterospectral_axes_follow_the_matrix_axes(self):
+        matrix = np.random.default_rng(0).standard_normal((100, 80))
+        wn_1 = np.linspace(3100, 3700, 100)
+        wn_2 = np.linspace(2800, 3050, 80)
+        ax = plot_contour(matrix, wn_1, wavenumbers_2=wn_2)
+        assert sorted(ax.get_xlim()) == [3100, 3700]
+        assert sorted(ax.get_ylim()) == [2800, 3050]
+
+    def test_axes_are_labelled_nu1_and_nu2(self, basic_matrix):
+        m, wn = basic_matrix
+        ax = plot_contour(m, wn)
+        assert r"\nu}_1" in ax.get_xlabel()
+        assert r"\nu}_2" in ax.get_ylabel()
+
+
+class TestDeprecatedWavenumbersX:
+    def test_alias_still_works_and_warns(self):
+        matrix = np.random.default_rng(0).standard_normal((100, 80))
+        wn_1 = np.linspace(3100, 3700, 100)
+        wn_2 = np.linspace(2800, 3050, 80)
+        with pytest.warns(DeprecationWarning, match="wavenumbers_2"):
+            ax = plot_contour(matrix, wn_1, wavenumbers_x=wn_2)
+        assert sorted(ax.get_ylim()) == [2800, 3050]
+
+    def test_alias_warns_through_plot_sync_async(self):
+        sync = np.random.default_rng(0).standard_normal((100, 80))
+        wn_1 = np.linspace(3100, 3700, 100)
+        wn_2 = np.linspace(2800, 3050, 80)
+        with pytest.warns(DeprecationWarning, match="wavenumbers_2"):
+            plot_sync_async(sync, sync, wn_1, wavenumbers_x=wn_2)
+
+    def test_both_names_rejected(self):
+        matrix = np.random.default_rng(0).standard_normal((100, 80))
+        wn_1 = np.linspace(3100, 3700, 100)
+        wn_2 = np.linspace(2800, 3050, 80)
+        with pytest.raises(TypeError, match="not both"):
+            plot_contour(matrix, wn_1, wavenumbers_2=wn_2, wavenumbers_x=wn_2)
