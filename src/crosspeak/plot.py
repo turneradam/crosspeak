@@ -239,6 +239,8 @@ def _second_axis(wavenumbers_2, wavenumbers_x):
     """Resolve the ν₂ axis, honouring the deprecated `wavenumbers_x` alias"""
     if wavenumbers_x is None:
         return wavenumbers_2
+    if wavenumbers_2 is not None:
+        raise TypeError("pass wavenumbers_2 or the deprecate wavenumbers_x, not both")
     warnings.warn(
         "wavenumbers_x is deprecated; use wavenumbers_2. It is the ν₂ axis "
         "(matrix columns) and is drawn on the y-axis",
