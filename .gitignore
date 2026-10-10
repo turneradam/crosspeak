@@ -18,3 +18,8 @@ htmlcov/
 !.vscode/settings.json
 !.vscode/extensions.jsonsandbox/
 sandbox/*
+# build artefacts and local tooling
+site/
+.cache/
+.vscode/
+dist/

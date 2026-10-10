@@ -58,4 +58,15 @@ ignore = [
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+
+[tool.hatch.build.targets.sdist]
+include = [
+    "src",
+    "tests",
+    "README.md",
+    "LICENSE",
+    "CHANGELOG.md",
+    "CITATION.cff",
+    "pyproject.toml",
+]
 addopts = "-q"
