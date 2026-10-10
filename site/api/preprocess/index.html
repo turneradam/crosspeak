@@ -1166,7 +1166,7 @@ and name preserved. The original is untouched.</p>
 
     <div class="doc doc-contents ">
 
-        <p>Return a new SpectralSeries restricted to a wavenumber range
+        <p>Return a new SpectralSeries restricted to a wavenumber range.
 Both bounds are inclusive. Does not modify original series.
 Wavenumber axis direction is maintained</p>
 
@@ -1197,7 +1197,7 @@ Wavenumber axis direction is maintained</p>
 <span class="normal">85</span>
 <span class="normal">86</span>
 <span class="normal">87</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">crop_region</span><span class="p">(</span><span class="n">series</span><span class="p">:</span> <span class="n">SpectralSeries</span><span class="p">,</span> <span class="n">low</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span> <span class="n">high</span><span class="p">:</span> <span class="nb">float</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">SpectralSeries</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;Return a new SpectralSeries restricted to a wavenumber range</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Return a new SpectralSeries restricted to a wavenumber range.</span>
 <span class="sd">    Both bounds are inclusive. Does not modify original series.</span>
 <span class="sd">    Wavenumber axis direction is maintained</span>
 <span class="sd">    &quot;&quot;&quot;</span>
@@ -1237,7 +1237,7 @@ Wavenumber axis direction is maintained</p>
 
     <div class="doc doc-contents ">
 
-        <p>Apply SavitzkyGolay smoothing along the wavenumber axis.</p>
+        <p>Apply Savitzky-Golay smoothing along the wavenumber axis.</p>
 <p>Each spectrum (row) is smoothed independently. The original series is
 not modified.</p>
 
@@ -1404,7 +1404,7 @@ perturbations, and name are preserved.</p>
     <span class="n">polyorder</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">3</span><span class="p">,</span>
     <span class="o">**</span><span class="n">kwargs</span><span class="p">,</span>
 <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">SpectralSeries</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;Apply SavitzkyGolay smoothing along the wavenumber axis.</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Apply Savitzky-Golay smoothing along the wavenumber axis.</span>
 
 <span class="sd">    Each spectrum (row) is smoothed independently. The original series is</span>
 <span class="sd">    not modified.</span>

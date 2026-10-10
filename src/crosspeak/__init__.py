@@ -1,6 +1,6 @@
 """crosspeak — generalized 2D correlation spectroscopy for vibrational spectra."""
 
-__version__ = "1.0.0"
+__version__ = "1.1.0"
 
 from crosspeak.io import read_series, read_spectrum, regrid_spectrum
 from crosspeak.noda import (

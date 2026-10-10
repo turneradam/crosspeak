@@ -1569,8 +1569,24 @@ was given.</p>
 <span class="normal">208</span>
 <span class="normal">209</span>
 <span class="normal">210</span>
-<span class="normal">211</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">read_series</span><span class="p">(</span><span class="n">files</span><span class="p">,</span> <span class="n">name</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n">target_grid</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">wavenumber_col</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span>
-                <span class="n">intensity_col</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">delimiter</span><span class="o">=</span><span class="s2">&quot;,&quot;</span><span class="p">,</span> <span class="n">skiprows</span><span class="o">=</span><span class="mi">0</span><span class="p">):</span>
+<span class="normal">211</span>
+<span class="normal">212</span>
+<span class="normal">213</span>
+<span class="normal">214</span>
+<span class="normal">215</span>
+<span class="normal">216</span>
+<span class="normal">217</span>
+<span class="normal">218</span>
+<span class="normal">219</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">read_series</span><span class="p">(</span>
+    <span class="n">files</span><span class="p">,</span>
+    <span class="n">name</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+    <span class="o">*</span><span class="p">,</span>
+    <span class="n">target_grid</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+    <span class="n">wavenumber_col</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span>
+    <span class="n">intensity_col</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span>
+    <span class="n">delimiter</span><span class="o">=</span><span class="s2">&quot;,&quot;</span><span class="p">,</span>
+    <span class="n">skiprows</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span>
+<span class="p">):</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;Read several spectra into a single `SpectralSeries`.</span>
 
 <span class="sd">    `files` maps each perturbation value to the file holding that spectrum, e.g.</span>
