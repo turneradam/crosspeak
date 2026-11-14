@@ -11,7 +11,7 @@ license = "MIT"
 authors = [{ name = "Adam H. Turner", email = "aturner@ateneo.edu" }]
 requires-python = ">=3.11"
 classifiers = [
-    "Development Status :: 2 - Pre-Alpha",
+    "Development Status :: 4 - Beta",
     "Intended Audience :: Science/Research",
     "License :: OSI Approved :: MIT License",
     "Programming Language :: Python :: 3.11",
@@ -25,6 +25,9 @@ dependencies = ["matplotlib>=3.8", "numpy>=2", "scipy>=1.13"]
 [project.urls]
 Homepage = "https://github.com/turneradam/crosspeak"
 Issues = "https://github.com/turneradam/crosspeak/issues"
+Documentation = "https://turneradam.github.io/crosspeak/"
+Changelog = "https://github.com/turneradam/crosspeak/blob/main/CHANGELOG.md"
+DOI = "https://doi.org/10.5281/zenodo.21354308"
 
 [tool.hatch.version]
 path = "src/crosspeak/__init__.py"
