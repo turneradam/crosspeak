@@ -168,20 +168,12 @@ def moving_window(
     """
     if not isinstance(series, SpectralSeries):
         raise TypeError(f"expected SpectralSeries, got {type(series).__name__}")
-    if not isinstance(window_size, (int, np.integer)):
-        raise TypeError(f"window_size must be an integer, got {type(window_size).__name__}")
-    if window_size % 2 == 0:
-        raise ValueError(f"window_size must be odd, got {window_size}")
-    if window_size < 3:
-        raise ValueError(f"window_size must be at least 3, got {window_size}")
 
     m = series.n_perturbations
-    if window_size > m:
-        raise ValueError(
-            f"window_size ({window_size}) exceeds the number of perturbation points ({m})"
-        )
+    _check_window_size(window_size, m)
 
     n_windows = m - window_size + 1
+
     n_wavenumbers = series.n_wavenumbers
     half = window_size // 2
 
@@ -316,6 +308,20 @@ def synchronous_hetero(
     Y_1 = series_1.intensities - series_1.intensities.mean(axis=0)
     Y_2 = series_2.intensities - series_2.intensities.mean(axis=0)
     return (Y_1.T @ Y_2) / (m - 1)
+
+
+def _check_window_size(window_size, m):
+    """Raise unless `window_size` is an odd integer between 3 and `m`."""
+    if not isinstance(window_size, (int, np.integer)):
+        raise TypeError(f"window_size must be an integer, got {type(window_size).__name__}")
+    if window_size % 2 == 0:
+        raise ValueError(f"window_size must be odd, got {window_size}")
+    if window_size < 3:
+        raise ValueError(f"window_size must be at least 3, got {window_size}")
+    if window_size > m:
+        raise ValueError(
+            f"window_size ({window_size}) exceeds the number of perturbation points ({m})"
+        )
 
 
 def asynchronous_hetero(
