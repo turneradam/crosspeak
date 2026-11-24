@@ -197,6 +197,109 @@ def moving_window(
     )
 
 
+class PCMWResult(NamedTuple):
+    """Correlation maps from a perturbation-correlation moving-window analysis.
+
+    Attributes
+    ----------
+    sync
+        Synchronous map Π, shape (n_windows, n_wavenumbers). Positive where a
+        band grows with the perturbation inside that window, negative where it
+        falls.
+    asyn
+        Asynchronous map Λ, same shape.
+    centres
+        Perturbation value at the middle of each window, shape (n_windows,).
+    window_variance
+        Sample variance of the perturbation inside each window, shape
+        (n_windows,). Dividing `sync` by this gives an estimate of the slope
+        dI/dt at each window.
+    """
+
+    sync: np.ndarray
+    asyn: np.ndarray
+    centres: np.ndarray
+    window_variance: np.ndarray
+
+
+def perturbation_moving_window(
+    series: SpectralSeries,
+    *,
+    window_size: int = 5,
+) -> PCMWResult:
+    """Perturbation-correlation moving-window 2DCOS (PCMW2D).
+
+    Where `moving_window` correlates the spectra with each other inside each
+    window, this correlates them with the perturbation itself. The perturbation
+    is treated as a one-channel spectrum and paired against every wavenumber,
+    so each window gives one row rather than a full matrix, and the result is a
+    single map of perturbation against wavenumber (Morita et al., 2006).
+
+    With t and Y mean-centred inside a window of L points and N the
+    Hilbert-Noda matrix of size L:
+
+        Π = t^T @ Y / (L - 1)        Λ = t^T @ N @ Y / (L - 1)
+
+    Π is the easier one to read. Positive means the band is growing over that
+    stretch of the perturbation, negative means it is falling, and a change of
+    sign marks a turnover.
+
+    Compare signs, not heights. For intensity that is locally linear in t,
+    Π = slope * Var(t in the window) exactly, so on an unevenly sampled axis a
+    window that happens to span a wide range of t reads larger for the same
+    slope. `window_variance` is returned so this can be divided out.
+
+    Parameters
+    ----------
+    series
+        A `SpectralSeries`. Crop to the region of interest first.
+    window_size
+        Perturbation points per window. Same rules as `moving_window`: odd, at
+        least 3, and no larger than the series. Default 5.
+
+    Returns
+    -------
+    PCMWResult
+        Named tuple of (sync, asyn, centres, window_variance), with
+        `n_windows = n_perturbations - window_size + 1`.
+
+    Raises
+    ------
+    ValueError
+        If `window_size` is even, below 3, or larger than the series.
+    """
+    if not isinstance(series, SpectralSeries):
+        raise TypeError(f"expected SpectralSeries, got {type(series).__name__}")
+
+    m = series.n_perturbations
+    _check_window_size(window_size, m)
+
+    n_windows = m - window_size + 1
+    half = window_size // 2
+    N = hilbert_noda_matrix(window_size)
+
+    sync = np.empty((n_windows, series.n_wavenumbers))
+    asyn = np.empty((n_windows, series.n_wavenumbers))
+    window_variance = np.empty(n_windows)
+
+    for i in range(n_windows):
+        t = series.perturbations[i : i + window_size]
+        Y = series.intensities[i : i + window_size]
+        t = t - t.mean()
+        Y = Y - Y.mean(axis=0)
+
+        sync[i] = (t @ Y) / (window_size - 1)
+        asyn[i] = (t @ N @ Y) / (window_size - 1)
+        window_variance[i] = (t @ t) / (window_size - 1)
+
+    return PCMWResult(
+        sync=sync,
+        asyn=asyn,
+        centres=series.perturbations[half : half + n_windows],
+        window_variance=window_variance,
+    )
+
+
 class AutopeakResult(NamedTuple):
     """Autopeaks found on a synchronous diagonal.
 
